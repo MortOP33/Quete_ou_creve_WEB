@@ -16,6 +16,7 @@ let assassinDelayShowTimeout = null;
 let sabotagePreparing = false;
 let endTriggered = false;
 let lastDesamorcage = 0;
+let isZombie = false;
 
 const rolePage = document.getElementById('rolePage');
 const maitrePage = document.getElementById('maitrePage');
@@ -24,20 +25,20 @@ const btnMaitre = document.getElementById('btnMaitre');
 const btnInnocent = document.getElementById('btnInnocent');
 const btnAssassin = document.getElementById('btnAssassin');
 const btnHacker = document.getElementById('btnHacker');
-const btnNecromancien = document.getElementById('btnNecromancien');
+const btnNecro = document.getElementById('btnNecro');
 const assassinsInput = document.getElementById('assassinsInput');
 const innocentsInput = document.getElementById('innocentsInput');
-const hackerInput = document.getElementById('hackerInput');
-const necromancienInput = document.getElementById('necromancienInput');
 const sabotageDurationInput = document.getElementById('sabotageDurationInput');
 const sabotageCDInput = document.getElementById('sabotageCDInput');
 const sabotageDelayInput = document.getElementById('sabotageDelayInput');
+const zombiesToReleverInput = document.getElementById('zombiesToReleverInput');
 const btnStart = document.getElementById('btnStart');
 const btnReset = document.getElementById('btnReset');
 const maitreState = document.getElementById('maitreState');
 const configPanel = document.getElementById('configPanel');
 const suiviPanel = document.getElementById('suiviPanel');
 const btnDead = document.getElementById('btnDead');
+const btnZombie = document.getElementById('btnZombie');
 const btnAction = document.getElementById('btnAction');
 const timerBox = document.getElementById('timerBox');
 const alertBox = document.getElementById('alertBox');
@@ -76,10 +77,12 @@ function hideAlert() {
 function disableJoueurBtns() {
   btnDead.disabled = true;
   btnAction.disabled = true;
+  btnZombie.disabled = true;
 }
 function enableJoueurBtns() {
   btnDead.disabled = false;
   btnAction.disabled = false;
+  btnZombie.disabled = false;
 }
 function showConfirmPopup(cb) {
   confirmPopup.classList.remove('hidden');
@@ -94,7 +97,11 @@ function showConfirmPopup(cb) {
 function resetJoueurStateUI() {
   mort = false;
   sabotageEnCours = false;
+  isZombie = false;
   btnDead.disabled = true;
+  btnDead.classList.remove('hidden');
+  btnZombie.classList.add('hidden');
+  btnZombie.disabled = false;
   btnAction.disabled = true;
   btnAction.textContent = "Action";
   btnAction.className = "big-btn action-btn";
@@ -127,6 +134,14 @@ function enableMaitreReturnBtn() {
 function disableMaitreReturnBtn() {
   btnRetourMaitre.disabled = true;
 }
+function setActionButtonForRole() {
+  btnAction.disabled = mort || isZombie;
+  if (role === "assassin" || role === "innocent" || role === "hacker" || role === "necromancien") {
+    btnAction.textContent = "Action";
+    btnAction.className = "big-btn action-btn";
+  }
+  btnAction.dataset.state = "action";
+}
 
 btnMaitre.onclick = function() {
   role = 'maitre';
@@ -141,6 +156,7 @@ btnInnocent.onclick = function() {
   role = 'innocent';
   showPage('joueur');
   resetJoueurStateUI();
+  setActionButtonForRole();
   socket.emit('setRole', { role: 'innocent' });
   setTimeout(() => {
     if (partieCommencee && !endTriggered) {
@@ -153,6 +169,7 @@ btnAssassin.onclick = function() {
   role = 'assassin';
   showPage('joueur');
   resetJoueurStateUI();
+  setActionButtonForRole();
   socket.emit('setRole', { role: 'assassin' });
   setTimeout(() => {
     if (partieCommencee && !endTriggered) {
@@ -165,6 +182,7 @@ btnHacker.onclick = function() {
   role = 'hacker';
   showPage('joueur');
   resetJoueurStateUI();
+  setActionButtonForRole();
   socket.emit('setRole', { role: 'hacker' });
   setTimeout(() => {
     if (partieCommencee && !endTriggered) {
@@ -173,10 +191,11 @@ btnHacker.onclick = function() {
     }
   }, 150);
 };
-btnNecromancien.onclick = function() {
+btnNecro.onclick = function() {
   role = 'necromancien';
   showPage('joueur');
   resetJoueurStateUI();
+  setActionButtonForRole();
   socket.emit('setRole', { role: 'necromancien' });
   setTimeout(() => {
     if (partieCommencee && !endTriggered) {
@@ -188,15 +207,15 @@ btnNecromancien.onclick = function() {
 btnStart.onclick = function() {
   const assassins = parseInt(assassinsInput.value, 10) || 1;
   const innocents = parseInt(innocentsInput.value, 10) || 1;
-  const hacker = parseInt(hackerInput.value, 10) || 1;
-  const necromancien = parseInt(necromancienInput.value, 10) || 1;
   sabotageDuration = parseInt(sabotageDurationInput.value, 10) || 40;
   sabotageCDValue = parseInt(sabotageCDInput.value, 10) || 60;
   sabotageDelayValue = parseInt(sabotageDelayInput.value, 10) || 10;
+  const zombiesToRelever = parseInt(zombiesToReleverInput.value, 10) || 2;
   socket.emit('start', {
-    assassins, innocents, hacker, necromancien,
+    assassins, innocents,
     sabotageDuration, sabotageCD: sabotageCDValue, sabotageDelay: sabotageDelayValue,
-    sabotageSyncWindow: 1
+    sabotageSyncWindow: 1,
+    zombiesToRelever
   });
   configPanel.classList.add('hidden');
   suiviPanel.classList.remove('hidden');
@@ -234,16 +253,27 @@ btnRoleToggle.onclick = function() {
 btnDead.onclick = function() {
   if (mort || endTriggered) return;
   mort = true;
+  btnDead.classList.add('hidden');
   btnDead.disabled = true;
   btnAction.disabled = true;
   setJoueurReturnBtnsState();
+  btnZombie.classList.remove('hidden');
+  btnZombie.disabled = false;
   socket.emit('dead', { role });
   showAlert("Tu es mort.");
 };
+btnZombie.onclick = function() {
+  if (isZombie) return;
+  isZombie = true;
+  btnZombie.disabled = true;
+  btnAction.disabled = true;
+  socket.emit('zombie');
+  showAlert("Tu es un zombie.");
+};
 
 btnAction.onclick = function() {
-  if (mort || endTriggered) return;
-  if (btnAction.dataset.state === "action" && role === "innocent") {
+  if (mort || endTriggered || isZombie) return;
+  if (role === "innocent" || role === "hacker") {
     showConfirmPopup((ok) => {
       if (!ok) return;
       btnAction.disabled = true;
@@ -251,7 +281,7 @@ btnAction.onclick = function() {
       setJoueurReturnBtnsState();
       socket.emit('innocents_win');
     });
-  } else if (btnAction.dataset.state === "action" && role === "assassin") {
+  } else if (role === "assassin") {
     const now = Date.now();
     if (assassinCooldownEnd > now) {
       let sec = Math.ceil((assassinCooldownEnd - now)/1000);
@@ -269,22 +299,8 @@ btnAction.onclick = function() {
     }
     sabotagePreparing = true;
     socket.emit('prepare_sabotage');
-  } else if (btnAction.dataset.state === "action" && role === "hacker") {
-    showConfirmPopup((ok) => {
-      if (!ok) return;
-      btnAction.disabled = true;
-      btnDead.disabled = true;
-      setJoueurReturnBtnsState();
-      socket.emit('innocents_win');
-    });
-  } else if (btnAction.dataset.state === "action" && role === "necromancien") {
-    showConfirmPopup((ok) => {
-      if (!ok) return;
-      btnAction.disabled = true;
-      btnDead.disabled = true;
-      setJoueurReturnBtnsState();
-      socket.emit('innocents_win');
-    });
+  } else if (role === "necromancien") {
+    // Aucune action
   } else if (btnAction.dataset.state === "sabotage") {
     const now = Date.now();
     if (now - lastDesamorcage < 1000) return;
@@ -297,7 +313,7 @@ socket.on('state', (state) => {
   partieCommencee = state.started;
   if(role === 'maitre') {
     maitreState.textContent =
-      `Assassins morts : ${state.assassinsDead}/${state.assassins} | Innocents morts : ${state.innocentsDead+state.hackerDead+state.necromancienDead}/${state.innocents+state.hacker+state.necromancien}`;
+      `Assassins morts : ${state.assassinsDead}/${state.assassins} | Innocents morts : ${state.innocentsDead}/${state.innocents}`;
     if(!state.started) {
       configPanel.classList.remove('hidden');
       suiviPanel.classList.add('hidden');
@@ -312,11 +328,13 @@ socket.on('state', (state) => {
     if (!state.started || endTriggered) {
       btnDead.disabled = true;
       btnAction.disabled = true;
+      btnZombie.disabled = true;
       btnRetourJoueur.disabled = false;
       btnRoleToggle.disabled = false;
     } else {
-      btnDead.disabled = mort;
-      btnAction.disabled = mort;
+      btnDead.disabled = mort || isZombie;
+      btnAction.disabled = mort || isZombie;
+      btnZombie.disabled = isZombie || !mort;
       btnRetourJoueur.disabled = false;
       btnRoleToggle.disabled = false;
     }
@@ -328,7 +346,7 @@ socket.on('sabotageStart', function({ duration }) {
   btnAction.textContent = "Désamorcer";
   btnAction.className = "big-btn desamorce-btn";
   btnAction.dataset.state = "sabotage";
-  btnDead.disabled = mort;
+  btnDead.disabled = mort || isZombie;
   setJoueurReturnBtnsState();
   showTimer(duration);
   showAlert("Sabotage ! Deux joueurs doivent désamorcer ensemble.", "#f7b801");
@@ -344,10 +362,8 @@ socket.on('sabotageTimer', function({ seconds }) {
 });
 socket.on('sabotageStopped', function() {
   sabotageEnCours = false;
-  btnAction.textContent = "Action";
-  btnAction.className = "big-btn action-btn";
-  btnAction.dataset.state = "action";
-  btnDead.disabled = mort;
+  setActionButtonForRole();
+  btnDead.disabled = mort || isZombie;
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Sabotage désamorcé !", "#00818a");
@@ -365,6 +381,7 @@ socket.on('sabotageFailed', function() {
   sabotageEnCours = false;
   btnAction.disabled = true;
   btnDead.disabled = true;
+  btnZombie.disabled = true;
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Sabotage réussi par les assassins ! Fin de partie.");
@@ -381,6 +398,7 @@ socket.on('end', ({ winner }) => {
   endTriggered = true;
   btnAction.disabled = true;
   btnDead.disabled = true;
+  btnZombie.disabled = true;
   setJoueurReturnBtnsState();
   hideTimer();
   if(winner === 'innocents') {
@@ -393,6 +411,23 @@ socket.on('end', ({ winner }) => {
     if (role !== "maitre") {
       try { audioAssassins.currentTime = 0; audioAssassins.play(); } catch(e){}
     }
+  }
+  enableJoueurReturnBtns();
+  btnReset && (btnReset.disabled = false);
+  enableMaitreReturnBtn();
+  sabotagePreparing = false;
+});
+socket.on('necromancien_win', () => {
+  sabotageEnCours = false;
+  endTriggered = true;
+  btnAction.disabled = true;
+  btnDead.disabled = true;
+  btnZombie.disabled = true;
+  setJoueurReturnBtnsState();
+  hideTimer();
+  showAlert("Victoire du Nécromancien !");
+  if (role !== "maitre") {
+    try { audioNecromancien.currentTime = 0; audioNecromancien.play(); } catch(e){}
   }
   enableJoueurReturnBtns();
   btnReset && (btnReset.disabled = false);
@@ -413,7 +448,7 @@ socket.on('reset', function() {
 });
 
 function unlockAudio() {
-  for (const a of [audioInnocents, audioAssassins, audioSabotageUp, audioSabotageDown]) {
+  for (const a of [audioInnocents, audioAssassins, audioSabotageUp, audioSabotageDown, audioNecromancien]) {
     a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(()=>{});
   }
   document.removeEventListener('click', unlockAudio);
@@ -424,7 +459,6 @@ function showPage(page) {
   rolePage.classList.toggle('hidden', page !== 'role');
   maitrePage.classList.toggle('hidden', page !== 'maitre');
   joueurPage.classList.toggle('hidden', page !== 'joueur');
-  // Correction : force la fermeture du popup à chaque changement de page
   document.getElementById('confirmPopup').classList.add('hidden');
 }
 showPage('role');

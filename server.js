@@ -10,6 +10,10 @@ let game = {};
 let players = {};
 let sabotage = null;
 
+// --- Variables pour le nécromancien
+let zombiesToRelever = 2; // Réglé par le maître, valeur par défaut
+let zombiesCount = 0;
+
 function resetGame() {
   game = {
     started: false,
@@ -40,6 +44,8 @@ function resetGame() {
     prepareEndTime: null,
     lastSabotageEnd: 0
   };
+  zombiesToRelever = 2;
+  zombiesCount = 0;
 }
 resetGame();
 
@@ -54,7 +60,9 @@ function emitState() {
     hackerDead: game.hackerDead,
     necromancienDead: game.necromancienDead,
     started: game.started,
-    sabotage: sabotage.actif
+    sabotage: sabotage.actif,
+    zombies: zombiesCount,
+    zombiesToRelever: zombiesToRelever
   });
 }
 
@@ -64,7 +72,7 @@ function checkEndGame() {
     emitState();
     return true;
   }
-  if (game.innocentsDead + game.hackerDead + game.necromancienDead >= game.innocents + game.hacker + game.necromancien && game.innocents + game.hacker + game.necromancien  > 0) {
+  if (game.innocentsDead + game.hackerDead + game.necromancienDead >= game.innocents + game.hacker + game.necromancien  > 0) {
     io.emit('end', {winner: 'assassins'});
     emitState();
     return true;
@@ -75,61 +83,70 @@ function checkEndGame() {
 io.on('connection', (socket) => {
   socket.on('setRole', ({role}) => {
     if (['maitre', 'innocent', 'assassin','hacker','necromancien'].includes(role)) {
-      players[socket.id] = {role, mort: false};
+      players[socket.id] = {role, mort: false, zombie: false};
     }
   });
 
   socket.on('start', ({
     assassins, innocents, hacker, necromancien,
-    sabotageDuration, sabotageCD, sabotageDelay, sabotageSyncWindow
+    sabotageDuration, sabotageCD, sabotageDelay, sabotageSyncWindow, zombiesToRelever: zTR
   }) => {
     game.started = true;
     game.assassins = parseInt(assassins, 10) || 1;
     game.innocents = parseInt(innocents, 10) || 1;
-    game.hacker = parseInt(hacker, 10) || 1;
-    game.necromancien = parseInt(necromancien, 10) || 1;
-    game.assassinsDead = 0;
-    game.innocentsDead = 0;
-    game.hackerDead = 0;
-    game.necromancienDead = 0;
-    if (sabotageDuration) game.sabotageDuration = sabotageDuration;
-    if (sabotageCD) game.sabotageCD = sabotageCD;
-    if (sabotageDelay) game.sabotageDelay = sabotageDelay;
-    if (sabotageSyncWindow) game.sabotageSyncWindow = sabotageSyncWindow;
-    Object.keys(players).forEach(id => players[id].mort = false);
-    sabotage.lastSabotageEnd = 0;
-    sabotage.preparing = false;
-    if (sabotage.prepareTimer) clearTimeout(sabotage.prepareTimer);
+    game.hacker = parseInt(hacker, 10) || 0;
+    game.necromancien = parseInt(necromancien, 10) || 0;
+    game.sabotageDuration = parseInt(sabotageDuration, 10) || 40;
+    game.sabotageCD = parseInt(sabotageCD, 10) || 60;
+    game.sabotageDelay = parseInt(sabotageDelay, 10) || 10;
+    game.sabotageSyncWindow = parseInt(sabotageSyncWindow, 10) || 1;
+    zombiesToRelever = parseInt(zTR, 10) || 2;
+    zombiesCount = 0;
+    for (let id in players) {
+      players[id].mort = false;
+      players[id].zombie = false;
+    }
     emitState();
   });
 
-  socket.on('reset', () => {
-    resetGame();
-    io.emit('reset');
-    emitState();
-  });
-
-  socket.on('dead', ({role: r}) => {
+  socket.on('dead', () => {
+    if (!game.started) return;
     if (!players[socket.id] || players[socket.id].mort) return;
     players[socket.id].mort = true;
-    if (players[socket.id].role === "innocent") {
-      game.innocentsDead++;
-    } else if (players[socket.id].role === "assassin") {
-      game.assassinsDead++;
-    } else if (players[socket.id].role === "hacker") {
-      game.hackerDead++;
-    } else if (players[socket.id].role === "necromancien") {
-      game.necromancienDead++;
+    switch (players[socket.id].role) {
+      case 'innocent': game.innocentsDead++; break;
+      case 'assassin': game.assassinsDead++; break;
+      case 'hacker': game.hackerDead++; break;
+      case 'necromancien': game.necromancienDead++; break;
+      default: break;
     }
-    checkEndGame();
     emitState();
+    checkEndGame();
+  });
+
+  // Gestion du bouton "Je suis un zombie !"
+  socket.on('zombie', () => {
+    if (!game.started) return;
+    if (!players[socket.id] || players[socket.id].zombie) return;
+    players[socket.id].zombie = true;
+    zombiesCount++;
+    emitState();
+    if (zombiesCount >= zombiesToRelever) {
+      io.emit('necromancien_win');
+      resetGame();
+      emitState();
+    }
   });
 
   socket.on('innocents_win', () => {
-    io.emit('end', {winner: 'innocents'});
-    emitState();
+    if (game.started) {
+      io.emit('end', {winner: 'innocents'});
+      emitState();
+      resetGame();
+    }
   });
 
+  // --- Gestion du sabotage (identique à avant)
   socket.on('prepare_sabotage', () => {
     const now = Date.now();
     if (!game.started || sabotage.actif || sabotage.preparing) return;
@@ -146,13 +163,23 @@ io.on('connection', (socket) => {
     }, game.sabotageDelay * 1000);
   });
 
-  socket.on('sabotage', () => {
-    // Jamais utilisé directement sauf compatibilité, on applique la logique du CD et du délai !
-    const now = Date.now();
-    if (!game.started || sabotage.actif || sabotage.preparing) return;
-    if (!players[socket.id] || players[socket.id].role !== 'assassin' || players[socket.id].mort) return;
-    if (sabotage.lastSabotageEnd && now - sabotage.lastSabotageEnd < game.sabotageCD * 1000) return;
-    sabotageStart(game.sabotageDuration);
+  socket.on('desamorcage', () => {
+    if (!sabotage.actif) return;
+    if (!players[socket.id] || players[socket.id].mort) return;
+    let now = Date.now();
+    sabotage.clicks.push({id: socket.id, at: now});
+    if (sabotage.clicks.length > 2) sabotage.clicks.shift();
+    if (sabotage.clicks.length === 2) {
+      const [a, b] = sabotage.clicks;
+      if (a.id !== b.id && Math.abs(a.at - b.at) <= (game.sabotageSyncWindow || 1) * 1000) {
+        clearInterval(sabotage.timer);
+        sabotage.timer = null;
+        sabotage.actif = false;
+        sabotage.lastSabotageEnd = Date.now();
+        io.emit('sabotageStopped');
+        emitState();
+      }
+    }
   });
 
   function sabotageStart(duration) {
@@ -178,24 +205,9 @@ io.on('connection', (socket) => {
     }, 1000);
   }
 
-  socket.on('desamorcage', () => {
-    if (!sabotage.actif) return;
-    if (!players[socket.id] || players[socket.id].mort) return;
-    let now = Date.now();
-    // On laisse chaque joueur cliquer, mais on ne garde que les 2 derniers clics
-    sabotage.clicks.push({id: socket.id, at: now});
-    if (sabotage.clicks.length > 2) sabotage.clicks.shift();
-    if (sabotage.clicks.length === 2) {
-      const [a, b] = sabotage.clicks;
-      if (a.id !== b.id && Math.abs(a.at - b.at) <= (game.sabotageSyncWindow || 1) * 1000) {
-        clearInterval(sabotage.timer);
-        sabotage.timer = null;
-        sabotage.actif = false;
-        sabotage.lastSabotageEnd = Date.now();
-        io.emit('sabotageStopped');
-        emitState();
-      }
-    }
+  socket.on('reset', () => {
+    resetGame();
+    emitState();
   });
 
   socket.on('disconnect', () => {

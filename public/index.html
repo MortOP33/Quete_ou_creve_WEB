@@ -44,12 +44,8 @@
       cursor: pointer;
       box-shadow: 0 2px 10px #0002;
     }
-    .maitre-btn {
-      background: #273043;
-    }
-    .maitre-btn:hover, .maitre-btn:focus {
-      background: #444d5a;
-    }
+    .maitre-btn { background: #273043; }
+    .maitre-btn:hover, .maitre-btn:focus { background: #444d5a; }
     .maitrereturn-btn {
       position: absolute;
       top: 1rem;
@@ -57,6 +53,14 @@
       transform: translateX(-50%);
       z-index: 10;
     }
+    .innocent-btn { background: #00818a; }
+    .innocent-btn:hover, .innocent-btn:focus { background: #00a0b0; }
+    .assassin-btn { background: #da0037; }
+    .assassin-btn:hover, .assassin-btn:focus { background: #ff1e56; }
+    .hacker-btn { background: #1d8f34; }
+    .hacker-btn:hover, .hacker-btn:focus { background: #35c454; }
+    .necro-btn { background: #7900a8; }
+    .necro-btn:hover, .necro-btn:focus { background: #a93fd6; }
     #rolePage {
       display: flex;
       flex-direction: column;
@@ -90,33 +94,6 @@
       justify-content: center;
       margin-bottom: 1rem;
       flex-wrap: wrap;
-    }
-    .innocent-btn {
-      background: #00818a;
-    }
-    .innocent-btn:hover, .innocent-btn:focus {
-      background: #00a0b0;
-    }
-    .assassin-btn {
-      background: #da0037;
-    }
-    .assassin-btn:hover, .assassin-btn:focus {
-      background: #ff1e56;
-    }
-    .hacker-btn {
-      background-color: white;
-      color: black;
-      border: 2px solid black;
-    }
-    .hacker-btn:hover {
-      background-color: #e0e0e0;
-    }
-    .necromancien-btn {
-      background-color: purple;
-      color: white;
-    }
-    .necromancien-btn:hover {
-      background-color: #aa00aa;
     }
     .top-center { align-self: center; margin-top: 40px; }
     .bottom-row {
@@ -176,15 +153,9 @@
       background: #888;
       cursor: default;
     }
-    .action-btn {
-      background: #00818a;
-      margin-top: 32px;
-    }
-    .desamorce-btn {
-      background: #f7b801;
-      color: #191b1f;
-      margin-top: 32px;
-    }
+    .action-btn { background: #00818a; margin-top: 32px; }
+    .desamorce-btn { background: #f7b801; color: #191b1f; margin-top: 32px; }
+    .zombie-btn { background: #7900a8; color: #fff; }
     .bottom-labels-box {
       width: 90vw;
       max-width: 400px;
@@ -370,6 +341,7 @@
   <audio id="audioAssassins" src="victoire_assassins.mp3" preload="auto"></audio>
   <audio id="audioSabotageUp" src="Sabotage_up.mp3" preload="auto"></audio>
   <audio id="audioSabotageDown" src="Sabotage_down.mp3" preload="auto"></audio>
+  <audio id="audioNecromancien" src="victoire_necromancien.mp3" preload="auto"></audio>
   <div id="rolePage" class="role-select">
     <div class="top-section">
       <button id="btnMaitre" class="role-btn maitre-btn">Maître</button>
@@ -381,7 +353,7 @@
       <button id="btnInnocent" class="role-btn innocent-btn">Innocent</button>
       <button id="btnAssassin" class="role-btn assassin-btn">Assassin</button>
       <button id="btnHacker" class="role-btn hacker-btn">Hacker</button>
-      <button id="btnNecromancien" class="role-btn necromancien-btn">Nécromancien</button>
+      <button id="btnNecro" class="role-btn necro-btn">Nécromancien</button>
     </div>
   </div>
   <div id="maitrePage" class="hidden centered-vertical">
@@ -401,16 +373,6 @@
             <input id="innocentsInput" type="number" min="1" value="8">
           </label>
         </div>
-        <div class="input-group">
-          <label>Nombre de hackers :
-            <input id="hackerInput" type="number" min="0" max="1" value="1">
-          </label>
-        </div>
-        <div class="input-group">
-          <label>Nombre de necromancien :
-            <input id="necromancienInput" type="number" min="0" max="1" value="1">
-          </label>
-        </div>
       </div>
       <div class="timer-settings-container">
         <div class="timer-settings-group">
@@ -428,6 +390,11 @@
             <input id="sabotageDelayInput" type="number" min="1" max="60" value="10"> s
           </label>
         </div>
+        <div class="timer-settings-group">
+          <label>Nombre de zombies à relever :
+            <input id="zombiesToReleverInput" type="number" min="1" value="6">
+          </label>
+        </div>
       </div>
       <button id="btnStart" class="role-btn innocent-btn">Démarrer la partie</button>
     </div>
@@ -443,6 +410,7 @@
     </div>
     <div id="roleInfo" class="subtitle"></div>
     <button id="btnDead" class="big-btn" style="background:#da0037;">Je suis mort !</button>
+    <button id="btnZombie" class="big-btn zombie-btn hidden">Je suis un zombie !</button>
     <button id="btnAction" class="big-btn action-btn">Action</button>
     <div class="bottom-labels-box">
       <div id="timerBox" class="timer-box hidden">00:40</div>
