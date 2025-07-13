@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Jeu Réseau Local</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="style.css"><!-- Optionnel : si tu veux externaliser le CSS -->
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #191b1f;
+      color: #fff;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: stretch;
+    }
+    .centered-vertical {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 30px;
+    }
+    .role-select {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 80vh;
+    }
+    .role-btn {
+      font-size: 1.5em;
+      padding: 25px 40px;
+      border-radius: 12px;
+      border: none;
+      margin: 20px;
+      color: #fff;
+      transition: background 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      box-shadow: 0 2px 10px #0002;
+    }
+    .maitre-btn {
+      background: #273043;
+    }
+    .maitre-btn:hover, .maitre-btn:focus {
+      background: #444d5a;
+    }
+    .maitrereturn-btn {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    #rolePage {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      height: 100vh;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    .top-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    #btnMaitre {
+      align-self: center;
+    }
+    #qr-container {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+    }
+    #qrcode {
+      width: 128px;
+      height: 128px;
+    }
+    .bottom-row {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .innocent-btn {
+      background: #00818a;
+    }
+    .innocent-btn:hover, .innocent-btn:focus {
+      background: #00a0b0;
+    }
+    .assassin-btn {
+      background: #da0037;
+    }
+    .assassin-btn:hover, .assassin-btn:focus {
+      background: #ff1e56;
+    }
+    .hacker-btn {
+      background-color: white;
+      color: black;
+      border: 2px solid black;
+    }
+    .hacker-btn:hover {
+      background-color: #e0e0e0;
+    }
+    .necromancien-btn {
+      background-color: purple;
+      color: white;
+    }
+    .necromancien-btn:hover {
+      background-color: #aa00aa;
+    }
+    .top-center { align-self: center; margin-top: 40px; }
+    .bottom-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px 40px 40px;
+      width: 100%;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      box-sizing: border-box;
+    }
+    .bottom-row .role-btn { margin: 0; width: 45%; }
+    .hidden { display: none !important; }
+    .input-group { margin: 16px 0; }
+    .input-group input { font-size: 1em; padding: 5px; width: 80px; }
+    .input-group input[type=number] { width: 60px; }
+    .timer-settings-container {
+      margin-top: 14px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+    }
+    .timer-settings-group {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-left: 2px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .timer-settings-group label {
+      margin-right: 4px;
+      font-size: 1em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .big-btn {
+      font-size: 2em;
+      padding: 40px 60px;
+      margin-top: 60px;
+      border-radius: 20px;
+      border: none;
+      background: #da0037;
+      color: #fff;
+      box-shadow: 0 4px 15px #0004;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: block;
+      width: 90vw;
+      max-width: 400px;
+    }
+    .big-btn[disabled] {
+      background: #888;
+      cursor: default;
+    }
+    .action-btn {
+      background: #00818a;
+      margin-top: 32px;
+    }
+    .desamorce-btn {
+      background: #f7b801;
+      color: #191b1f;
+      margin-top: 32px;
+    }
+    .bottom-labels-box {
+      width: 90vw;
+      max-width: 400px;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      margin: 0 auto;
+      margin-bottom: 0;
+      position: relative;
+    }
+    .timer-box {
+      font-size: 2em;
+      margin-top: 0;
+      margin-bottom: 8px;
+      background: #222f;
+      padding: 20px 50px;
+      border-radius: 18px;
+      color: #fffe;
+      box-shadow: 0 2px 10px #0006;
+      letter-spacing: .09em;
+      min-height: 36px;
+      min-width: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: opacity 0.2s;
+    }
+    .timer-box.hidden {
+      opacity: 0;
+      visibility: hidden;
+      height: 0;
+      padding: 0 50px;
+      margin-bottom: 0;
+    }
+    .alert {
+      background: #da0037;
+      color: #fff;
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-top: 6px;
+      font-size: 1.2em;
+      font-weight: bold;
+      box-shadow: 0 2px 10px #0002;
+      min-height: 36px;
+      min-width: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: opacity 0.2s;
+    }
+    .alert.hidden {
+      opacity: 0;
+      visibility: hidden;
+      height: 0;
+      padding: 0 20px;
+      margin-top: 0;
+    }
+    .popup-backdrop {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .popup-box {
+      background: #fff;
+      color: #111;
+      border-radius: 16px;
+      padding: 32px 24px 24px 24px;
+      font-size: 1.3em;
+      box-shadow: 0 6px 32px #0007;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 250px;
+      min-height: 80px;
+    }
+    .popup-btn-row {
+      display: flex;
+      gap: 24px;
+      margin-top: 28px;
+    }
+    .popup-btn {
+      font-size: 1.1em;
+      padding: 10px 32px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #00818a;
+      color: #fff;
+      transition: background 0.2s;
+    }
+    .popup-btn.cancel { background: #bbb; color: #222;}
+    .maitre-panel { margin-top: 30px; }
+    .dual-btn-row {
+      display: flex;
+      width: 90vw;
+      max-width: 400px;
+      margin-bottom: 12px;
+      margin-top: 14px;
+      gap: 10px;
+      justify-content: center;
+    }
+    .dual-btn-row button {
+      flex: 1 1 45%;
+      max-width: 180px;
+      min-width: 80px;
+      font-size: 1.1em !important;
+      padding: 12px 0;
+      margin: 0;
+      border-radius: 12px;
+      background: #45494e;
+      color: #fff;
+      border: none;
+      box-shadow: 0 2px 8px #0002;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .dual-btn-row button[disabled] {
+      background: #888;
+      color: #eee;
+      cursor: default;
+    }
+    .maitre-top-row {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 8px;
+    }
+    .maitre-top-row button {
+      font-size: 1.1em;
+      padding: 10px 25px;
+      border-radius: 12px;
+      background: #45494e;
+      color: #fff;
+      border: none;
+      box-shadow: 0 2px 8px #0002;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-right: 16px;
+    }
+    .maitre-top-row button[disabled] {
+      background: #888;
+      color: #eee;
+      cursor: default;
+    }
+    @media (max-width: 600px) {
+      .bottom-row { flex-direction: column; align-items: stretch; }
+      .bottom-row .role-btn { width: 100%; margin-bottom: 16px; }
+      .big-btn, .timer-box { font-size: 1.3em; }
+      .dual-btn-row { flex-direction: column; gap: 7px; }
+      .dual-btn-row button { max-width: 100%; }
+      .bottom-labels-box { min-height: 120px; }
+      .timer-settings-container { width: 100%; }
+      .timer-settings-group { flex-direction: column; align-items: flex-start; gap: 5px; }
+    }
+    .subtitle {
+      margin-top: 22px;
+      font-size: 1.1em;
+      color: #fff8;
+      margin-bottom: 0;
+      min-height: 2.4em;
+      text-align: center;
+      transition: opacity 0.2s;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .subtitle.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <audio id="audioInnocents" src="victoire_innocents.mp3" preload="auto"></audio>
+  <audio id="audioAssassins" src="victoire_assassins.mp3" preload="auto"></audio>
+  <audio id="audioSabotageUp" src="Sabotage_up.mp3" preload="auto"></audio>
+  <audio id="audioSabotageDown" src="Sabotage_down.mp3" preload="auto"></audio>
+  <div id="rolePage" class="role-select">
+    <div class="top-section">
+      <button id="btnMaitre" class="role-btn maitre-btn">Maître</button>
+      <div id="qr-container">
+        <div id="qrcode"></div>
+      </div>
+    </div>
+    <div class="bottom-row">
+      <button id="btnInnocent" class="role-btn innocent-btn">Innocent</button>
+      <button id="btnAssassin" class="role-btn assassin-btn">Assassin</button>
+      <button id="btnHacker" class="role-btn hacker-btn">Hacker</button>
+      <button id="btnNecromancien" class="role-btn necromancien-btn">Nécromancien</button>
+    </div>
+  </div>
+  <div id="maitrePage" class="hidden centered-vertical">
+    <div class="maitre-top-row">
+      <button id="btnRetourMaitre" class="maitrereturn-btn" type="button">Retour</button>
+    </div>
+    <h2>Maître du jeu</h2>
+    <div id="configPanel" class="maitre-panel">
+      <div>
+        <div class="input-group">
+          <label>Nombre d'assassins :
+            <input id="assassinsInput" type="number" min="1" value="2">
+          </label>
+        </div>
+        <div class="input-group">
+          <label>Nombre d'innocents :
+            <input id="innocentsInput" type="number" min="1" value="8">
+          </label>
+        </div>
+        <div class="input-group">
+          <label>Nombre de hackers :
+            <input id="hackerInput" type="number" min="0" max="1" value="1">
+          </label>
+        </div>
+        <div class="input-group">
+          <label>Nombre de necromancien :
+            <input id="necromancienInput" type="number" min="0" max="1" value="1">
+          </label>
+        </div>
+      </div>
+      <div class="timer-settings-container">
+        <div class="timer-settings-group">
+          <label>Durée sabotage :
+            <input id="sabotageDurationInput" type="number" min="10" max="300" value="40"> s
+          </label>
+        </div>
+        <div class="timer-settings-group">
+          <label>CD entre sabotages :
+            <input id="sabotageCDInput" type="number" min="10" max="600" value="60"> s
+          </label>
+        </div>
+        <div class="timer-settings-group">
+          <label>Délai application sabotage :
+            <input id="sabotageDelayInput" type="number" min="1" max="60" value="10"> s
+          </label>
+        </div>
+      </div>
+      <button id="btnStart" class="role-btn innocent-btn">Démarrer la partie</button>
+    </div>
+    <div id="suiviPanel" class="hidden maitre-panel">
+      <div id="maitreState" style="font-size:1.3em; margin-bottom:20px;"></div>
+      <button id="btnReset" class="role-btn assassin-btn">Fin de partie / Nouvelle partie</button>
+    </div>
+  </div>
+  <div id="joueurPage" class="hidden centered-vertical">
+    <div class="dual-btn-row">
+      <button id="btnRetourJoueur" type="button">Retour</button>
+      <button id="btnRoleToggle" type="button">Afficher rôle</button>
+    </div>
+    <div id="roleInfo" class="subtitle"></div>
+    <button id="btnDead" class="big-btn" style="background:#da0037;">Je suis mort !</button>
+    <button id="btnAction" class="big-btn action-btn">Action</button>
+    <div class="bottom-labels-box">
+      <div id="timerBox" class="timer-box hidden">00:40</div>
+      <div id="alertBox" class="alert hidden"></div>
+    </div>
+  </div>
+  <div id="confirmPopup" class="popup-backdrop hidden">
+    <div class="popup-box">
+      <div style="margin-bottom:12px;">Confirmer la fin de vos quêtes&nbsp;?</div>
+      <div class="popup-btn-row">
+        <button id="popupOk" class="popup-btn">OK</button>
+        <button id="popupCancel" class="popup-btn cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+  <script src="client.js"></script>
+</body>
+</html>
