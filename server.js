@@ -84,7 +84,9 @@ function checkEndGame() {
   if (game.assassinsDead >= game.assassins && game.assassins > 0) {
     stopSabotage();
     io.emit('end', {winner: 'innocents'});
-    io.emit('reset');
+    for (const [socketId, player] of Object.entries(players)) {
+      if(player.role === 'maitre') io.to(socketId).emit('reset');
+    }
     resetGame();
     emitState();
     return true;
@@ -92,7 +94,9 @@ function checkEndGame() {
   if (game.innocentsDead + game.hackerDead + game.necromancienDead >= game.innocents + game.hacker + game.necromancien  > 0) {
     stopSabotage();
     io.emit('end', {winner: 'assassins'});
-    io.emit('reset');
+    for (const [socketId, player] of Object.entries(players)) {
+      if(player.role === 'maitre') io.to(socketId).emit('reset');
+    }
     resetGame();
     emitState();
     return true;
@@ -155,7 +159,9 @@ io.on('connection', (socket) => {
     if (zombiesCount >= zombiesToRelever) {
       stopSabotage();
       io.emit('necromancien_win');
-      io.emit('reset');
+      for (const [socketId, player] of Object.entries(players)) {
+        if(player.role === 'maitre') io.to(socketId).emit('reset');
+      }
       resetGame();
       emitState();
     }
@@ -165,7 +171,9 @@ io.on('connection', (socket) => {
     if (game.started) {
       stopSabotage();
       io.emit('end', {winner: 'innocents'});
-      io.emit('reset');
+      for (const [socketId, player] of Object.entries(players)) {
+        if(player.role === 'maitre') io.to(socketId).emit('reset');
+      }
       resetGame();
       emitState();
     }
@@ -219,7 +227,9 @@ io.on('connection', (socket) => {
         stopSabotage();
         io.emit('sabotageFailed');
         io.emit('end', {winner: 'assassins'});
-        io.emit('reset');
+        for (const [socketId, player] of Object.entries(players)) {
+          if(player.role === 'maitre') io.to(socketId).emit('reset');
+        }
         resetGame();
         emitState();
       }

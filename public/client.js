@@ -74,28 +74,32 @@ function hideAlert() {
   alertBox.textContent = "";
   alertBox.classList.add('hidden');
 }
-function disableJoueurBtns() {
-  btnDead.disabled = true;
-  btnAction.disabled = true;
-  btnZombie.disabled = true;
-}
 function enableJoueurBtns() {
   if (!mort && !isZombie && partieCommencee && !endTriggered) {
     btnDead.disabled = false;
     btnAction.disabled = false;
     btnZombie.disabled = true;
+    btnRetourJoueur.disabled = false;
+  } else if (mort && partieCommencee && !endTriggered) {
+    btnDead.disabled = true;
+    btnAction.disabled = true;
+    btnZombie.disabled = false;
     btnRetourJoueur.disabled = true;
+  } else if (isZombie && partieCommencee && !endTriggered) {
+    btnDead.disabled = true;
+    btnAction.disabled = true;
+    btnZombie.disabled = true;
+    btnRetourJoueur.disabled = true;
+  } else if (!partieCommencee && !endTriggered) {
+    btnDead.disabled = true;
+    btnAction.disabled = true;
+    btnZombie.disabled = true;
+    btnRetourJoueur.disabled = false;
   } else if (endTriggered) {
     btnDead.disabled = true;
     btnAction.disabled = true;
     btnZombie.disabled = true;
     btnRetourJoueur.disabled = false;
-  } else {
-    // Mort ou zombie en cours de partie
-    btnDead.disabled = true;
-    btnAction.disabled = true;
-    btnZombie.disabled = true;
-    btnRetourJoueur.disabled = true;
   }
   btnRoleToggle.disabled = false;
 }
@@ -274,6 +278,7 @@ btnZombie.onclick = function() {
 
 btnAction.onclick = function() {
   if (mort || endTriggered || isZombie) return;
+  if (btnAction.dataset.state === "sabotage") return;
   if (role === "innocent" || role === "hacker") {
     showConfirmPopup((ok) => {
       if (!ok) return;
@@ -339,6 +344,7 @@ socket.on('sabotageStart', function({ duration }) {
   btnAction.textContent = "Désamorcer";
   btnAction.className = "big-btn desamorce-btn";
   btnAction.dataset.state = "sabotage";
+  btnAction.disabled = false;
   btnDead.disabled = mort || isZombie;
   setJoueurReturnBtnsState();
   showTimer(duration);
@@ -435,12 +441,14 @@ socket.on('sabotageDelay', ({delay}) => {
   sabotagePreparing = true;
 });
 socket.on('reset', function() {
-  showPage('role');
-  resetJoueurStateUI();
-  role = null;
-  enableMaitreReturnBtn();
-  endTriggered = false;
-  sabotageEnCours = false;
+  if (role === "maitre") {
+    showPage('role');
+    resetJoueurStateUI();
+    role = null;
+    enableMaitreReturnBtn();
+    endTriggered = false;
+    sabotageEnCours = false;
+  }
 });
 
 function unlockAudio() {
