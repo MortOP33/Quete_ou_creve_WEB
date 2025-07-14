@@ -254,5 +254,3 @@ const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
   console.log('Serveur lancé sur http://localhost:' + PORT);
 });
-
-// Coucou c'est Dralnar ! Arrete de hack mon code merci
