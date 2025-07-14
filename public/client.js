@@ -80,9 +80,24 @@ function disableJoueurBtns() {
   btnZombie.disabled = true;
 }
 function enableJoueurBtns() {
-  btnDead.disabled = false;
-  btnAction.disabled = false;
-  btnZombie.disabled = false;
+  if (!mort && !isZombie && partieCommencee && !endTriggered) {
+    btnDead.disabled = false;
+    btnAction.disabled = false;
+    btnZombie.disabled = true;
+    btnRetourJoueur.disabled = true;
+  } else if (endTriggered) {
+    btnDead.disabled = true;
+    btnAction.disabled = true;
+    btnZombie.disabled = true;
+    btnRetourJoueur.disabled = false;
+  } else {
+    // Mort ou zombie en cours de partie
+    btnDead.disabled = true;
+    btnAction.disabled = true;
+    btnZombie.disabled = true;
+    btnRetourJoueur.disabled = true;
+  }
+  btnRoleToggle.disabled = false;
 }
 function showConfirmPopup(cb) {
   confirmPopup.classList.remove('hidden');
@@ -110,7 +125,8 @@ function resetJoueurStateUI() {
   btnRoleToggle.textContent = "Afficher rôle";
   hideTimer();
   hideAlert();
-  enableJoueurReturnBtns();
+  btnRetourJoueur.disabled = false;
+  btnRoleToggle.disabled = false;
   assassinCooldownEnd = 0;
   assassinDelayEnd = 0;
   sabotagePreparing = false;
@@ -123,10 +139,14 @@ function enableJoueurReturnBtns() {
 }
 function disableJoueurReturnBtns() {
   btnRetourJoueur.disabled = true;
-  btnRoleToggle.disabled = true;
+  btnRoleToggle.disabled = false;
 }
 function setJoueurReturnBtnsState() {
-  enableJoueurReturnBtns();
+  if (endTriggered) {
+    enableJoueurReturnBtns();
+  } else {
+    disableJoueurReturnBtns();
+  }
 }
 function enableMaitreReturnBtn() {
   btnRetourMaitre.disabled = false;
@@ -158,12 +178,7 @@ btnInnocent.onclick = function() {
   resetJoueurStateUI();
   setActionButtonForRole();
   socket.emit('setRole', { role: 'innocent' });
-  setTimeout(() => {
-    if (partieCommencee && !endTriggered) {
-      btnDead.disabled = false;
-      btnAction.disabled = false;
-    }
-  }, 150);
+  setTimeout(() => enableJoueurBtns(), 150);
 };
 btnAssassin.onclick = function() {
   role = 'assassin';
@@ -171,12 +186,7 @@ btnAssassin.onclick = function() {
   resetJoueurStateUI();
   setActionButtonForRole();
   socket.emit('setRole', { role: 'assassin' });
-  setTimeout(() => {
-    if (partieCommencee && !endTriggered) {
-      btnDead.disabled = false;
-      btnAction.disabled = false;
-    }
-  }, 150);
+  setTimeout(() => enableJoueurBtns(), 150);
 };
 btnHacker.onclick = function() {
   role = 'hacker';
@@ -184,12 +194,7 @@ btnHacker.onclick = function() {
   resetJoueurStateUI();
   setActionButtonForRole();
   socket.emit('setRole', { role: 'hacker' });
-  setTimeout(() => {
-    if (partieCommencee && !endTriggered) {
-      btnDead.disabled = false;
-      btnAction.disabled = false;
-    }
-  }, 150);
+  setTimeout(() => enableJoueurBtns(), 150);
 };
 btnNecro.onclick = function() {
   role = 'necromancien';
@@ -197,12 +202,7 @@ btnNecro.onclick = function() {
   resetJoueurStateUI();
   setActionButtonForRole();
   socket.emit('setRole', { role: 'necromancien' });
-  setTimeout(() => {
-    if (partieCommencee && !endTriggered) {
-      btnDead.disabled = false;
-      btnAction.disabled = false;
-    }
-  }, 150);
+  setTimeout(() => enableJoueurBtns(), 150);
 };
 btnStart.onclick = function() {
   const assassins = parseInt(assassinsInput.value, 10) || 1;
@@ -254,13 +254,13 @@ btnDead.onclick = function() {
   if (mort || endTriggered) return;
   mort = true;
   btnDead.classList.add('hidden');
-  btnDead.disabled = true;
   btnAction.disabled = true;
   setJoueurReturnBtnsState();
   btnZombie.classList.remove('hidden');
   btnZombie.disabled = false;
   socket.emit('dead', { role });
   showAlert("Tu es mort.");
+  enableJoueurBtns();
 };
 btnZombie.onclick = function() {
   if (isZombie) return;
@@ -269,6 +269,7 @@ btnZombie.onclick = function() {
   btnAction.disabled = true;
   socket.emit('zombie');
   showAlert("Tu es un zombie.");
+  enableJoueurBtns();
 };
 
 btnAction.onclick = function() {
@@ -301,13 +302,17 @@ btnAction.onclick = function() {
     socket.emit('prepare_sabotage');
   } else if (role === "necromancien") {
     // Aucune action
-  } else if (btnAction.dataset.state === "sabotage") {
+  }
+};
+
+btnAction.addEventListener('click', function() {
+  if(btnAction.dataset.state === "sabotage" && !btnAction.disabled && !mort && !isZombie && !endTriggered) {
     const now = Date.now();
     if (now - lastDesamorcage < 1000) return;
     lastDesamorcage = now;
     socket.emit('desamorcage');
   }
-};
+});
 
 socket.on('state', (state) => {
   partieCommencee = state.started;
@@ -325,19 +330,7 @@ socket.on('state', (state) => {
       disableMaitreReturnBtn();
     }
   } else if (role === 'innocent' || role === 'assassin' || role === 'hacker' || role === 'necromancien') {
-    if (!state.started || endTriggered) {
-      btnDead.disabled = true;
-      btnAction.disabled = true;
-      btnZombie.disabled = true;
-      btnRetourJoueur.disabled = false;
-      btnRoleToggle.disabled = false;
-    } else {
-      btnDead.disabled = mort || isZombie;
-      btnAction.disabled = mort || isZombie;
-      btnZombie.disabled = isZombie || !mort;
-      btnRetourJoueur.disabled = false;
-      btnRoleToggle.disabled = false;
-    }
+    enableJoueurBtns();
   }
 });
 
@@ -392,6 +385,7 @@ socket.on('sabotageFailed', function() {
   btnReset && (btnReset.disabled = false);
   enableMaitreReturnBtn();
   sabotagePreparing = false;
+  endTriggered = true;
 });
 socket.on('end', ({ winner }) => {
   sabotageEnCours = false;
@@ -445,6 +439,8 @@ socket.on('reset', function() {
   resetJoueurStateUI();
   role = null;
   enableMaitreReturnBtn();
+  endTriggered = false;
+  sabotageEnCours = false;
 });
 
 function unlockAudio() {

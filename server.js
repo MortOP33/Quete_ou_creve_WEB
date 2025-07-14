@@ -66,14 +66,34 @@ function emitState() {
   });
 }
 
+function stopSabotage() {
+  if (sabotage.timer) {
+    clearInterval(sabotage.timer);
+    sabotage.timer = null;
+  }
+  sabotage.actif = false;
+  sabotage.clicks = [];
+  sabotage.preparing = false;
+  sabotage.prepareEndTime = null;
+  sabotage.prepareTimer && clearTimeout(sabotage.prepareTimer);
+  sabotage.prepareTimer = null;
+  emitState();
+}
+
 function checkEndGame() {
   if (game.assassinsDead >= game.assassins && game.assassins > 0) {
+    stopSabotage();
     io.emit('end', {winner: 'innocents'});
+    io.emit('reset');
+    resetGame();
     emitState();
     return true;
   }
   if (game.innocentsDead + game.hackerDead + game.necromancienDead >= game.innocents + game.hacker + game.necromancien  > 0) {
+    stopSabotage();
     io.emit('end', {winner: 'assassins'});
+    io.emit('reset');
+    resetGame();
     emitState();
     return true;
   }
@@ -106,6 +126,7 @@ io.on('connection', (socket) => {
       players[id].mort = false;
       players[id].zombie = false;
     }
+    stopSabotage();
     emitState();
   });
 
@@ -132,7 +153,9 @@ io.on('connection', (socket) => {
     zombiesCount++;
     emitState();
     if (zombiesCount >= zombiesToRelever) {
+      stopSabotage();
       io.emit('necromancien_win');
+      io.emit('reset');
       resetGame();
       emitState();
     }
@@ -140,13 +163,15 @@ io.on('connection', (socket) => {
 
   socket.on('innocents_win', () => {
     if (game.started) {
+      stopSabotage();
       io.emit('end', {winner: 'innocents'});
-      emitState();
+      io.emit('reset');
       resetGame();
+      emitState();
     }
   });
 
-  // --- Gestion du sabotage (identique à avant)
+  // --- Gestion du sabotage
   socket.on('prepare_sabotage', () => {
     const now = Date.now();
     if (!game.started || sabotage.actif || sabotage.preparing) return;
@@ -172,10 +197,7 @@ io.on('connection', (socket) => {
     if (sabotage.clicks.length === 2) {
       const [a, b] = sabotage.clicks;
       if (a.id !== b.id && Math.abs(a.at - b.at) <= (game.sabotageSyncWindow || 1) * 1000) {
-        clearInterval(sabotage.timer);
-        sabotage.timer = null;
-        sabotage.actif = false;
-        sabotage.lastSabotageEnd = Date.now();
+        stopSabotage();
         io.emit('sabotageStopped');
         emitState();
       }
@@ -194,18 +216,19 @@ io.on('connection', (socket) => {
       let remaining = Math.max(0, Math.floor((sabotage.endTime - Date.now())/1000));
       io.emit('sabotageTimer', {seconds: remaining});
       if (remaining <= 0) {
-        clearInterval(sabotage.timer);
-        sabotage.timer = null;
-        sabotage.actif = false;
-        sabotage.lastSabotageEnd = Date.now();
+        stopSabotage();
         io.emit('sabotageFailed');
         io.emit('end', {winner: 'assassins'});
+        io.emit('reset');
+        resetGame();
         emitState();
       }
     }, 1000);
   }
 
   socket.on('reset', () => {
+    stopSabotage();
+    io.emit('reset');
     resetGame();
     emitState();
   });
