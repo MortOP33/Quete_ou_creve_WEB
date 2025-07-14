@@ -255,4 +255,4 @@ http.listen(PORT, () => {
   console.log('Serveur lancé sur http://localhost:' + PORT);
 });
 
-// Coucou c'est Dralnar !
+// Coucou c'est Dralnar ! Arrete de hack mon code merci
