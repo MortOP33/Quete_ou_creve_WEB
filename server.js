@@ -140,10 +140,14 @@ io.on('connection', (socket) => {
     if (!players[socket.id] || players[socket.id].mort) return;
     players[socket.id].mort = true;
     switch (players[socket.id].role) {
-      case 'innocent': game.innocentsDead++; break;
-      case 'assassin': game.assassinsDead++; break;
-      case 'hacker': game.hackerDead++; break;
-      case 'necromancien': game.necromancienDead++; break;
+      case 'innocent':
+      case 'hacker':
+      case 'necromancien':
+        game.innocentsDead++;
+        break;
+      case 'assassin':
+        game.assassinsDead++;
+        break;
       default: break;
     }
     emitState();
