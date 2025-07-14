@@ -131,6 +131,7 @@ io.on('connection', (socket) => {
       players[id].zombie = false;
     }
     stopSabotage();
+    io.emit('debut_partie');
     emitState();
   });
 

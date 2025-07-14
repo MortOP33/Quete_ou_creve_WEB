@@ -46,6 +46,7 @@ const roleInfo = document.getElementById('roleInfo');
 const btnRetourMaitre = document.getElementById('btnRetourMaitre');
 const btnRetourJoueur = document.getElementById('btnRetourJoueur');
 const btnRoleToggle = document.getElementById('btnRoleToggle');
+const audioDebutPartie = document.getElementById('audioDebutPartie');
 const audioInnocents = document.getElementById('audioInnocents');
 const audioAssassins = document.getElementById('audioAssassins');
 const audioHacker = document.getElementById('audioHacker');
@@ -103,8 +104,9 @@ function enableJoueurBtns() {
   }
   btnRoleToggle.disabled = false;
 }
-function showConfirmPopup(cb) {
+function showConfirmPopup(cb, message = "Valider les quêtes ?") {
   confirmPopup.classList.remove('hidden');
+  document.getElementById('popupMessage').textContent = message;
   function cleanup() {
     confirmPopup.classList.add('hidden');
     popupOk.onclick = null;
@@ -256,24 +258,30 @@ btnRoleToggle.onclick = function() {
 };
 btnDead.onclick = function() {
   if (mort || endTriggered) return;
-  mort = true;
-  btnDead.classList.add('hidden');
-  btnAction.disabled = true;
-  setJoueurReturnBtnsState();
-  btnZombie.classList.remove('hidden');
-  btnZombie.disabled = false;
-  socket.emit('dead', { role });
-  showAlert("Tu es mort.");
-  enableJoueurBtns();
+  showConfirmPopup((ok) => {
+    if (!ok) return;
+    mort = true;
+    btnDead.classList.add('hidden');
+    btnAction.disabled = true;
+    setJoueurReturnBtnsState();
+    btnZombie.classList.remove('hidden');
+    btnZombie.disabled = false;
+    socket.emit('dead', { role });
+    showAlert("Tu es mort.");
+    enableJoueurBtns();
+  }, "Confirmer que tu es mort ?");
 };
 btnZombie.onclick = function() {
   if (isZombie) return;
-  isZombie = true;
-  btnZombie.disabled = true;
-  btnAction.disabled = true;
-  socket.emit('zombie');
-  showAlert("Tu es un zombie.");
-  enableJoueurBtns();
+  showConfirmPopup((ok) => {
+    if (!ok) return;
+    isZombie = true;
+    btnZombie.disabled = true;
+    btnAction.disabled = true;
+    socket.emit('zombie');
+    showAlert("Tu es un zombie.");
+    enableJoueurBtns();
+  }, "Confirmer que tu deviens un zombie ?");
 };
 
 btnAction.onclick = function() {
@@ -317,6 +325,10 @@ btnAction.addEventListener('click', function() {
     lastDesamorcage = now;
     socket.emit('desamorcage');
   }
+});
+
+socket.on('debut_partie', () => {
+  try { audioDebutPartie.currentTime = 0; audioDebutPartie.play(); } catch(e){}
 });
 
 socket.on('state', (state) => {

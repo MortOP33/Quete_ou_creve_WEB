@@ -337,6 +337,7 @@
   </style>
 </head>
 <body>
+  <audio id="audioDebutPartie" src="debut_partie.mp3"></audio>
   <audio id="audioInnocents" src="victoire_innocents.mp3" preload="auto"></audio>
   <audio id="audioAssassins" src="victoire_assassins.mp3" preload="auto"></audio>
   <audio id="audioSabotageUp" src="Sabotage_up.mp3" preload="auto"></audio>
@@ -419,7 +420,9 @@
   </div>
   <div id="confirmPopup" class="popup-backdrop hidden">
     <div class="popup-box">
-      <div style="margin-bottom:12px;">Confirmer la fin de vos quêtes&nbsp;?</div>
+      <div style="margin-bottom:12px;">
+        <span id="popupMessage">Confirmer la fin de vos quêtes&nbsp;?</span>
+      </div>
       <div class="popup-btn-row">
         <button id="popupOk" class="popup-btn">OK</button>
         <button id="popupCancel" class="popup-btn cancel">Annuler</button>
