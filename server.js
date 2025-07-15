@@ -98,7 +98,10 @@ function stopSabotage() {
 }
 
 function stopPanne() {
-  panne.timer = null;
+  if (panne.timer) {
+    clearInterval(panne.timer);
+    panne.timer = null;
+  }
   panne.actif = false;
   panne.clicks = [];
   panne.preparing = false;
