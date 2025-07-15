@@ -9,6 +9,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 let game = {};
 let players = {};
 let sabotage = null;
+let panne = null;
 
 // --- Variables pour le nécromancien
 let zombiesToRelever = 2; // Réglé par le maître, valeur par défaut
@@ -30,7 +31,11 @@ function resetGame() {
     sabotageDuration: 40,
     sabotageCD: 60,
     sabotageDelay: 10,
-    sabotageSyncWindow: 1
+    sabotageSyncWindow: 1,
+    panne: false,
+    panneId: 0,
+    panneDuration: 20,
+    panneCD: 90,       
   };
   players = {};
   sabotage = {
@@ -43,6 +48,17 @@ function resetGame() {
     prepareTimer: null,
     prepareEndTime: null,
     lastSabotageEnd: 0
+  };
+  panne = {
+    timer: null,
+    endTime: null,
+    clicks: [],
+    actif: false,
+    id: 0,
+    preparing: false,
+    prepareTimer: null,
+    prepareEndTime: null,
+    lastPanneEnd: 0
   };
   zombiesToRelever = 2;
   zombiesCount = 0;
@@ -61,6 +77,7 @@ function emitState() {
     necromancienDead: game.necromancienDead,
     started: game.started,
     sabotage: sabotage.actif,
+    panne: panne.actif,
     zombies: zombiesCount,
     zombiesToRelever: zombiesToRelever
   });
@@ -77,6 +94,17 @@ function stopSabotage() {
   sabotage.prepareEndTime = null;
   sabotage.prepareTimer && clearTimeout(sabotage.prepareTimer);
   sabotage.prepareTimer = null;
+  emitState();
+}
+
+function stopPanne() {
+  panne.timer = null;
+  panne.actif = false;
+  panne.clicks = [];
+  panne.preparing = false;
+  panne.prepareEndTime = null;
+  panne.prepareTimer && clearTimeout(panne.prepareTimer);
+  panne.prepareTimer = null;
   emitState();
 }
 
@@ -113,7 +141,9 @@ io.on('connection', (socket) => {
 
   socket.on('start', ({
     assassins, innocents, hacker, necromancien,
-    sabotageDuration, sabotageCD, sabotageDelay, sabotageSyncWindow, zombiesToRelever: zTR
+    sabotageDuration, sabotageCD, sabotageDelay, sabotageSyncWindow,
+    panneDuration, panneCD,
+    zombiesToRelever: zTR
   }) => {
     game.started = true;
     game.assassins = parseInt(assassins, 10) || 1;
@@ -124,6 +154,8 @@ io.on('connection', (socket) => {
     game.sabotageCD = parseInt(sabotageCD, 10) || 60;
     game.sabotageDelay = parseInt(sabotageDelay, 10) || 10;
     game.sabotageSyncWindow = parseInt(sabotageSyncWindow, 10) || 1;
+    game.panneDuration = parseInt(panneDuration, 10) || 20;
+    game.panneCD = parseInt(panneCD, 10) || 90;
     zombiesToRelever = parseInt(zTR, 10) || 2;
     zombiesCount = 0;
     for (let id in players) {
@@ -131,6 +163,7 @@ io.on('connection', (socket) => {
       players[id].zombie = false;
     }
     stopSabotage();
+    stopPanne();
     io.emit('debut_partie');
     emitState();
   });
@@ -163,6 +196,7 @@ io.on('connection', (socket) => {
     emitState();
     if (zombiesCount >= zombiesToRelever) {
       stopSabotage();
+      stopPanne();
       io.emit('necromancien_win');
       for (const [socketId, player] of Object.entries(players)) {
         if(player.role === 'maitre') io.to(socketId).emit('reset');
@@ -175,6 +209,7 @@ io.on('connection', (socket) => {
   socket.on('innocents_win', () => {
     if (game.started) {
       stopSabotage();
+      stopPanne();
       io.emit('end', {winner: 'innocents'});
       for (const [socketId, player] of Object.entries(players)) {
         if(player.role === 'maitre') io.to(socketId).emit('reset');
@@ -227,7 +262,7 @@ io.on('connection', (socket) => {
     if (sabotage.timer) clearInterval(sabotage.timer);
     sabotage.timer = setInterval(() => {
       let remaining = Math.max(0, Math.floor((sabotage.endTime - Date.now())/1000));
-      io.emit('sabotageTimer', {seconds: remaining});
+      io.emit('debuffTimer', {seconds: remaining});
       if (remaining <= 0) {
         stopSabotage();
         io.emit('sabotageFailed');
@@ -241,8 +276,45 @@ io.on('connection', (socket) => {
     }, 1000);
   }
 
+  // --- Gestion de la panne
+  socket.on('prepare_panne', () => {
+    const now = Date.now();
+    if (!game.started || panne.actif || panne.preparing) return;
+    if (!players[socket.id] || players[socket.id].role !== 'assassin' || players[socket.id].mort) return;
+    // CD entre pannes
+    if (panne.lastPanneEnd && now - panne.lastpanneEnd < game.panneCD * 1000) return;
+    panne.preparing = true;
+    panne.prepareEndTime = now + game.sabotageDelay * 1000;
+    io.emit('sabotageDelay', {delay: game.sabotageDelay});
+    panne.prepareTimer = setTimeout(() => {
+      panne.preparing = false;
+      panne.prepareTimer = null;
+      panneStart(game.panneDuration);
+    }, game.sabotageDelay * 1000);
+  });
+
+  function panneStart(duration) {
+    panne.actif = true;
+    panne.endTime = Date.now() + (duration || game.panneDuration) * 1000;
+    panne.clicks = [];
+    panne.id += 1;
+    io.emit('panneStart', {duration: (duration || game.panneDuration)});
+    emitState();
+    if (panne.timer) clearInterval(panne.timer);
+    panne.timer = setInterval(() => {
+      let remaining = Math.max(0, Math.floor((panne.endTime - Date.now())/1000));
+      io.emit('debuffTimer', {seconds: remaining});
+      if (remaining <= 0) {
+        stopPanne();
+        io.emit('panneStopped');
+        emitState();
+      }
+    }, 1000);
+  }
+
   socket.on('reset', () => {
     stopSabotage();
+    stopPanne();
     io.emit('reset');
     resetGame();
     emitState();

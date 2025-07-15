@@ -154,7 +154,7 @@
       cursor: default;
     }
     .action-btn { background: #00818a; margin-top: 32px; }
-    .desamorce-btn { background: #f7b801; color: #191b1f; margin-top: 32px; }
+    .debuff-btn { background: #f7b801; color: #191b1f; margin-top: 32px; }
     .zombie-btn { background: #7900a8; color: #fff; }
     .bottom-labels-box {
       width: 90vw;
@@ -342,6 +342,8 @@
   <audio id="audioAssassins" src="victoire_assassins.mp3" preload="auto"></audio>
   <audio id="audioSabotageUp" src="Sabotage_up.mp3" preload="auto"></audio>
   <audio id="audioSabotageDown" src="Sabotage_down.mp3" preload="auto"></audio>
+  <audio id="audioPanneUp" src="Panne_up.mp3" preload="auto"></audio>
+  <audio id="audioPanneDown" src="Panne_down.mp3" preload="auto"></audio>
   <audio id="audioNecromancien" src="victoire_necromancien.mp3" preload="auto"></audio>
   <div id="rolePage" class="role-select">
     <div class="top-section">
@@ -392,6 +394,16 @@
           </label>
         </div>
         <div class="timer-settings-group">
+          <label>Durée panne :
+            <input id="panneDurationInput" type="number" min="5" max="300" value="20"> s
+          </label>
+        </div>
+        <div class="timer-settings-group">
+          <label>CD entre pannes :
+            <input id="panneCDInput" type="number" min="10" max="600" value="90"> s
+          </label>
+        </div>
+        <div class="timer-settings-group">
           <label>Nombre de zombies à relever :
             <input id="zombiesToReleverInput" type="number" min="1" value="6">
           </label>
@@ -426,6 +438,16 @@
       <div class="popup-btn-row">
         <button id="popupOk" class="popup-btn">OK</button>
         <button id="popupCancel" class="popup-btn cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+  <div id="assassinActionPopup" class="popup-backdrop hidden">
+    <div class="popup-box">
+      <div style="margin-bottom:12px;">Choix de l'action !</div>
+      <div class="popup-btn-row">
+        <button id="popupAssassinBombe" class="popup-btn">Bombe</button>
+        <button id="popupAssassinPanne" class="popup-btn">Panne</button>
+        <button id="popupAssassinCancel" class="popup-btn cancel">Annuler</button>
       </div>
     </div>
   </div>

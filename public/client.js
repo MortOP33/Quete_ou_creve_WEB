@@ -3,17 +3,24 @@ let role = null;
 let mort = false;
 let sabotageEnCours = false;
 let sabotageTryTimeout = null;
+let panneEnCours = false;
+let panneTryTimeout = null;
 let partieCommencee = false;
 let sabotageDuration = 40;
 let sabotageCDValue = 60;
 let sabotageDelayValue = 10;
 let sabotageClickWindow = 1;
 let sabotageBtnDisableTime = 1;
-let assassinCooldownEnd = 0;
+let panneDuration = 20;
+let panneCDValue = 90;
+let assassinCooldownSabotageEnd = 0;
+let assassinCooldownPanneEnd = 0;
 let assassinDelayEnd = 0;
-let assassinShowTimerTimeout = null;
+let assassinShowTimerSabotageTimeout = null;
+let assassinShowTimerPanneTimeout = null;
 let assassinDelayShowTimeout = null;
 let sabotagePreparing = false;
+let pannePreparing = false;
 let endTriggered = false;
 let lastDesamorcage = 0;
 let isZombie = false;
@@ -31,6 +38,8 @@ const innocentsInput = document.getElementById('innocentsInput');
 const sabotageDurationInput = document.getElementById('sabotageDurationInput');
 const sabotageCDInput = document.getElementById('sabotageCDInput');
 const sabotageDelayInput = document.getElementById('sabotageDelayInput');
+const panneDurationInput = document.getElementById('panneDurationInput');
+const panneCDInput = document.getElementById('panneCDInput');
 const zombiesToReleverInput = document.getElementById('zombiesToReleverInput');
 const btnStart = document.getElementById('btnStart');
 const btnReset = document.getElementById('btnReset');
@@ -53,9 +62,15 @@ const audioHacker = document.getElementById('audioHacker');
 const audioNecromancien = document.getElementById('audioNecromancien');
 const audioSabotageUp = document.getElementById('audioSabotageUp');
 const audioSabotageDown = document.getElementById('audioSabotageDown');
+const audioPanneUp = document.getElementById('audioPanneUp');
+const audioPanneDown = document.getElementById('audioPanneDown');
 const confirmPopup = document.getElementById('confirmPopup');
 const popupOk = document.getElementById('popupOk');
 const popupCancel = document.getElementById('popupCancel');
+const assassinActionPopup = document.getElementById('assassinActionPopup');
+const popupAssassinBombe = document.getElementById('popupAssassinBombe');
+const popupAssassinPanne = document.getElementById('popupAssassinPanne');
+const popupAssassinCancel = document.getElementById('popupAssassinCancel');
 
 function showTimer(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -104,6 +119,7 @@ function enableJoueurBtns() {
   }
   btnRoleToggle.disabled = false;
 }
+
 function showConfirmPopup(cb, message = "Valider les quêtes ?") {
   confirmPopup.classList.remove('hidden');
   document.getElementById('popupMessage').textContent = message;
@@ -115,9 +131,34 @@ function showConfirmPopup(cb, message = "Valider les quêtes ?") {
   popupOk.onclick = function() { cleanup(); cb(true); };
   popupCancel.onclick = function() { cleanup(); cb(false); };
 }
+function showAssassinActionPopup({ onBombe, onPanne, onCancel }) {
+  assassinActionPopup.classList.remove('hidden');
+  popupAssassinBombe.onclick = function() {
+    assassinActionPopup.classList.add('hidden');
+    if (onBombe) onBombe();
+    cleanup();
+  };
+  popupAssassinPanne.onclick = function() {
+    assassinActionPopup.classList.add('hidden');
+    if (onPanne) onPanne();
+    cleanup();
+  };
+  popupAssassinCancel.onclick = function() {
+    assassinActionPopup.classList.add('hidden');
+    if (onCancel) onCancel();
+    cleanup();
+  };
+  function cleanup() {
+    popupAssassinBombe.onclick = null;
+    popupAssassinPanne.onclick = null;
+    popupAssassinCancel.onclick = null;
+  }
+}
+
 function resetJoueurStateUI() {
   mort = false;
   sabotageEnCours = false;
+  panneEnCours = false;
   isZombie = false;
   btnDead.disabled = true;
   btnDead.classList.remove('hidden');
@@ -133,9 +174,11 @@ function resetJoueurStateUI() {
   hideAlert();
   btnRetourJoueur.disabled = false;
   btnRoleToggle.disabled = false;
-  assassinCooldownEnd = 0;
+  assassinCooldownSabotageEnd = 0;
+  assassinCooldownPanneEnd = 0;
   assassinDelayEnd = 0;
   sabotagePreparing = false;
+  pannePreparing = false;
   endTriggered = false;
   lastDesamorcage = 0;
 }
@@ -216,11 +259,14 @@ btnStart.onclick = function() {
   sabotageDuration = parseInt(sabotageDurationInput.value, 10) || 40;
   sabotageCDValue = parseInt(sabotageCDInput.value, 10) || 60;
   sabotageDelayValue = parseInt(sabotageDelayInput.value, 10) || 10;
-  const zombiesToRelever = parseInt(zombiesToReleverInput.value, 10) || 2;
+  panneDuration = parseInt(panneDurationInput.value, 10) || 20;
+  panneCDValue = parseInt(panneCDInput.value, 10) || 90;
+  const zombiesToRelever = parseInt(zombiesToReleverInput.value, 10) || 6;
   socket.emit('start', {
     assassins, innocents,
     sabotageDuration, sabotageCD: sabotageCDValue, sabotageDelay: sabotageDelayValue,
     sabotageSyncWindow: 1,
+    panneDuration, panneCD: panneCDValue,
     zombiesToRelever
   });
   configPanel.classList.add('hidden');
@@ -286,7 +332,7 @@ btnZombie.onclick = function() {
 
 btnAction.onclick = function() {
   if (mort || endTriggered || isZombie) return;
-  if (btnAction.dataset.state === "sabotage") return;
+  if (btnAction.dataset.state === "debuff") return;
   if (role === "innocent" || role === "hacker") {
     showConfirmPopup((ok) => {
       if (!ok) return;
@@ -297,29 +343,54 @@ btnAction.onclick = function() {
     });
   } else if (role === "assassin") {
     const now = Date.now();
-    if (assassinCooldownEnd > now) {
-      let sec = Math.ceil((assassinCooldownEnd - now)/1000);
-      showTimer(sec);
-      if (assassinShowTimerTimeout) clearTimeout(assassinShowTimerTimeout);
-      assassinShowTimerTimeout = setTimeout(() => hideTimer(), 1000);
+    showAssassinActionPopup({
+      onBombe: function() {
+        if (assassinCooldownSabotageEnd > now) {
+          let sec = Math.ceil((assassinCooldownSabotageEnd - now)/1000);
+          showTimer(sec);
+          if (assassinShowTimerSabotageTimeout) clearTimeout(assassinShowTimerSabotageTimeout);
+          assassinShowTimerSabotageTimeout = setTimeout(() => hideTimer(), 1000);
+          return;
+        }
+        if (sabotagePreparing && assassinDelayEnd > now) {
+          let sec = Math.ceil((assassinDelayEnd - now)/1000);
+          showTimer(sec);
+          if (assassinDelayShowTimeout) clearTimeout(assassinDelayShowTimeout);
+          assassinDelayShowTimeout = setTimeout(() => hideTimer(), 1000);
+          return;
+        }
+        sabotagePreparing = true;
+        socket.emit('prepare_sabotage');
+      },
+      onPanne: function() {
+        if (assassinCooldownPanneEnd > now) {
+          let sec = Math.ceil((assassinCooldownPanneEnd - now)/1000);
+          showTimer(sec);
+          if (assassinShowTimerPanneTimeout) clearTimeout(assassinShowTimerPanneTimeout);
+          assassinShowTimerPanneTimeout = setTimeout(() => hideTimer(), 1000);
+          return;
+        }
+        if (pannePreparing && assassinDelayEnd > now) {
+          let sec = Math.ceil((assassinDelayEnd - now)/1000);
+          showTimer(sec);
+          if (assassinDelayShowTimeout) clearTimeout(assassinDelayShowTimeout);
+          assassinDelayShowTimeout = setTimeout(() => hideTimer(), 1000);
+          return;
+        }
+        pannePreparing = true;
+        socket.emit('prepare_panne');
+      },
+    oncancel: function() {
       return;
     }
-    if (sabotagePreparing && assassinDelayEnd > now) {
-      let sec = Math.ceil((assassinDelayEnd - now)/1000);
-      showTimer(sec);
-      if (assassinDelayShowTimeout) clearTimeout(assassinDelayShowTimeout);
-      assassinDelayShowTimeout = setTimeout(() => hideTimer(), 1000);
-      return;
-    }
-    sabotagePreparing = true;
-    socket.emit('prepare_sabotage');
+    });
   } else if (role === "necromancien") {
     // Aucune action
   }
 };
 
 btnAction.addEventListener('click', function() {
-  if(btnAction.dataset.state === "sabotage" && !btnAction.disabled && !mort && !isZombie && !endTriggered) {
+  if(btnAction.dataset.state === "debuff" && !btnAction.disabled && !mort && !isZombie && !endTriggered) {
     const now = Date.now();
     if (now - lastDesamorcage < 1000) return;
     lastDesamorcage = now;
@@ -354,8 +425,8 @@ socket.on('state', (state) => {
 socket.on('sabotageStart', function({ duration }) {
   sabotageEnCours = true;
   btnAction.textContent = "Désamorcer";
-  btnAction.className = "big-btn desamorce-btn";
-  btnAction.dataset.state = "sabotage";
+  btnAction.className = "big-btn debuff-btn";
+  btnAction.dataset.state = "debuff";
   btnAction.disabled = false;
   btnDead.disabled = mort || isZombie;
   setJoueurReturnBtnsState();
@@ -368,9 +439,6 @@ socket.on('sabotageStart', function({ duration }) {
   sabotagePreparing = false;
   lastDesamorcage = 0;
 });
-socket.on('sabotageTimer', function({ seconds }) {
-  showTimer(seconds);
-});
 socket.on('sabotageStopped', function() {
   sabotageEnCours = false;
   setActionButtonForRole();
@@ -379,7 +447,7 @@ socket.on('sabotageStopped', function() {
   hideTimer();
   showAlert("Sabotage désamorcé !", "#00818a");
   if (role === "assassin") {
-    assassinCooldownEnd = Date.now() + sabotageCDValue * 1000;
+    assassinCooldownSabotageEnd = Date.now() + sabotageCDValue * 1000;
     sabotagePreparing = false;
   }
   if (role !== "maitre") {
@@ -405,8 +473,48 @@ socket.on('sabotageFailed', function() {
   sabotagePreparing = false;
   endTriggered = true;
 });
+
+socket.on('panneStart', function({ duration }) {
+  panneEnCours = true;
+  btnAction.textContent = "Panne !";
+  btnAction.className = "big-btn debuff-btn";
+  btnAction.dataset.state = "debuff";
+  btnAction.disabled = true;
+  btnDead.disabled = mort || isZombie;
+  setJoueurReturnBtnsState();
+  showTimer(duration);
+  showAlert("Les lampes sont coupées", "#f7b801");
+  if (role !== "maitre") {
+    try { audioPanneUp.currentTime = 0; audioPanneUp.play(); } catch(e){}
+  }
+  btnReset && (btnReset.disabled = true);
+  pannePreparing = false;
+});
+socket.on('panneStopped', function() {
+  panneEnCours = false;
+  setActionButtonForRole();
+  btnDead.disabled = mort || isZombie;
+  setJoueurReturnBtnsState();
+  hideTimer();
+  showAlert("Les lampes sont restaurées", "#00818a");
+  if (role === "assassin") {
+    assassinCooldownPanneEnd = Date.now() + panneCDValue * 1000;
+    pannePreparing = false;
+  }
+  if (role !== "maitre") {
+    try { audioPanneDown.currentTime = 0; audioPanneDown.play(); } catch(e){}
+  }
+  setTimeout(hideAlert, 2500);
+  btnReset && (btnReset.disabled = false);
+});
+
+socket.on('debuffTimer', function({ seconds }) {
+  showTimer(seconds);
+});
+
 socket.on('end', ({ winner }) => {
   sabotageEnCours = false;
+  panneEnCours = false;
   endTriggered = true;
   btnAction.disabled = true;
   btnDead.disabled = true;
@@ -428,9 +536,12 @@ socket.on('end', ({ winner }) => {
   btnReset && (btnReset.disabled = false);
   enableMaitreReturnBtn();
   sabotagePreparing = false;
+  pannePreparing = false;
 });
+
 socket.on('necromancien_win', () => {
   sabotageEnCours = false;
+  panneEnCours = false;
   endTriggered = true;
   btnAction.disabled = true;
   btnDead.disabled = true;
@@ -445,13 +556,17 @@ socket.on('necromancien_win', () => {
   btnReset && (btnReset.disabled = false);
   enableMaitreReturnBtn();
   sabotagePreparing = false;
+  pannePreparing = true;
 });
+
 socket.on('sabotageDelay', ({delay}) => {
   const now = Date.now();
   sabotageDelayValue = delay;
   assassinDelayEnd = now + delay*1000;
   sabotagePreparing = true;
+  pannePreparing = true;
 });
+
 socket.on('reset', function() {
   if (role === "maitre") {
     showPage('role');
@@ -460,11 +575,12 @@ socket.on('reset', function() {
     enableMaitreReturnBtn();
     endTriggered = false;
     sabotageEnCours = false;
+    panneEnCours = false;
   }
 });
 
 function unlockAudio() {
-  for (const a of [audioInnocents, audioAssassins, audioSabotageUp, audioSabotageDown, audioNecromancien]) {
+  for (const a of [audioInnocents, audioAssassins, audioSabotageUp, audioSabotageDown, audioPanneUp, audioPanneDown, audioNecromancien]) {
     a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(()=>{});
   }
   document.removeEventListener('click', unlockAudio);
