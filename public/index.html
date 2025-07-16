@@ -310,6 +310,7 @@
       cursor: default;
     }
     @media (max-width: 600px) {
+      .top-section { flex-direction: column; gap: 12px; }
       .bottom-row { flex-direction: column; align-items: stretch; }
       .bottom-row .role-btn { width: 100%; margin-bottom: 16px; }
       .big-btn, .timer-box { font-size: 1.3em; }
@@ -351,12 +352,12 @@
       <div id="qr-container">
         <div id="qrcode"></div>
       </div>
-      <div class="bottom-row">
-        <button id="btnInnocent" class="role-btn innocent-btn">Innocent</button>
-        <button id="btnAssassin" class="role-btn assassin-btn">Assassin</button>
-        <button id="btnHacker" class="role-btn hacker-btn">Hacker</button>
-        <button id="btnNecro" class="role-btn necro-btn">Nécromancien</button>
-      </div>
+    </div>
+    <div class="bottom-row">
+      <button id="btnInnocent" class="role-btn innocent-btn">Innocent</button>
+      <button id="btnAssassin" class="role-btn assassin-btn">Assassin</button>
+      <button id="btnHacker" class="role-btn hacker-btn">Hacker</button>
+      <button id="btnNecro" class="role-btn necro-btn">Nécromancien</button>
     </div>
   </div>
   <div id="maitrePage" class="hidden centered-vertical">
