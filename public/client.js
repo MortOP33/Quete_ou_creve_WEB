@@ -432,7 +432,7 @@ socket.on('sabotageStart', function({ duration }) {
   setJoueurReturnBtnsState();
   showTimer(duration);
   showAlert("Sabotage ! Deux joueurs doivent désamorcer ensemble.", "#f7b801");
-  if (role !== "maitre") {
+  if (role !== "maitre" && !mort && !isZombie) {
     try { audioSabotageUp.currentTime = 0; audioSabotageUp.play(); } catch(e){}
   }
   btnReset && (btnReset.disabled = true);
@@ -450,7 +450,7 @@ socket.on('sabotageStopped', function() {
     assassinCooldownSabotageEnd = Date.now() + sabotageCDValue * 1000;
     sabotagePreparing = false;
   }
-  if (role !== "maitre") {
+  if (role !== "maitre" && !mort && !isZombie) {
     try { audioSabotageDown.currentTime = 0; audioSabotageDown.play(); } catch(e){}
   }
   setTimeout(hideAlert, 2500);
@@ -484,7 +484,7 @@ socket.on('panneStart', function({ duration }) {
   setJoueurReturnBtnsState();
   showTimer(duration);
   showAlert("Les lampes sont coupées", "#f7b801");
-  if (role !== "maitre") {
+  if (role !== "maitre" && !mort && !isZombie) {
     try { audioPanneUp.currentTime = 0; audioPanneUp.play(); } catch(e){}
   }
   btnReset && (btnReset.disabled = true);
@@ -501,7 +501,7 @@ socket.on('panneStopped', function() {
     assassinCooldownPanneEnd = Date.now() + panneCDValue * 1000;
     pannePreparing = false;
   }
-  if (role !== "maitre") {
+  if (role !== "maitre" && !mort && !isZombie) {
     try { audioPanneDown.currentTime = 0; audioPanneDown.play(); } catch(e){}
   }
   setTimeout(hideAlert, 2500);
