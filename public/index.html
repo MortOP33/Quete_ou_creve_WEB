@@ -66,7 +66,6 @@
       flex-direction: column;
       justify-content: space-between;
       align-items: center;
-      height: 100vh;
       padding: 1rem;
       box-sizing: border-box;
     }
@@ -77,10 +76,14 @@
       margin-top: 1rem;
     }
     #btnMaitre {
-      align-self: center;
+      margin-bottom: 18px;
+      width: 180px;
+      max-width: 80vw;
+      font-size: 1.1em;
     }
     #qr-container {
       margin-top: 1rem;
+      margin-bottom: 1rem;
       display: flex;
       justify-content: center;
     }
@@ -88,25 +91,23 @@
       width: 128px;
       height: 128px;
     }
-    .bottom-row {
+    .role-row {
       display: flex;
-      gap: 1rem;
+      flex-direction: row;
       justify-content: center;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
+      gap: 16px;
+      width: 100%;
+      margin-bottom: 14px;
+    }
+    .role-btn {
+      flex: 1 1 0;
+      font-size: 1.1em;
+      padding: 16px 0;
+      border-radius: 10px;
+      border: none;
+      margin: 0 4px;
     }
     .top-center { align-self: center; margin-top: 40px; }
-    .bottom-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 0 40px 40px 40px;
-      width: 100%;
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      box-sizing: border-box;
-    }
-    .bottom-row .role-btn { margin: 0; width: 45%; }
     .hidden { display: none !important; }
     .input-group { margin: 16px 0; }
     .input-group input { font-size: 1em; padding: 5px; width: 80px; }
@@ -310,9 +311,6 @@
       cursor: default;
     }
     @media (max-width: 600px) {
-      .top-section { flex-direction: column; gap: 12px; }
-      .bottom-row { flex-direction: column; align-items: stretch; }
-      .bottom-row .role-btn { width: 100%; margin-bottom: 16px; }
       .big-btn, .timer-box { font-size: 1.3em; }
       .dual-btn-row { flex-direction: column; gap: 7px; }
       .dual-btn-row button { max-width: 100%; }
@@ -346,16 +344,18 @@
   <audio id="audioPanneUp" src="Panne_up.mp3" preload="auto"></audio>
   <audio id="audioPanneDown" src="Panne_down.mp3" preload="auto"></audio>
   <audio id="audioNecromancien" src="victoire_necromancien.mp3" preload="auto"></audio>
-  <div id="rolePage" class="role-select">
+  <div id="rolePage">
     <div class="top-section">
       <button id="btnMaitre" class="role-btn maitre-btn">Maître</button>
       <div id="qr-container">
         <div id="qrcode"></div>
       </div>
     </div>
-    <div class="bottom-row">
+    <div class="role-row">
       <button id="btnInnocent" class="role-btn innocent-btn">Innocent</button>
       <button id="btnAssassin" class="role-btn assassin-btn">Assassin</button>
+    </div>
+    <div class="role-row">
       <button id="btnHacker" class="role-btn hacker-btn">Hacker</button>
       <button id="btnNecro" class="role-btn necro-btn">Nécromancien</button>
     </div>
