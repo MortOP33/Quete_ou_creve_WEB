@@ -24,6 +24,7 @@ let pannePreparing = false;
 let endTriggered = false;
 let lastDesamorcage = 0;
 let isZombie = false;
+let alertTimeoutId = null;
 
 const rolePage = document.getElementById('rolePage');
 const maitrePage = document.getElementById('maitrePage');
@@ -50,7 +51,6 @@ const btnDead = document.getElementById('btnDead');
 const btnZombie = document.getElementById('btnZombie');
 const btnAction = document.getElementById('btnAction');
 const timerBox = document.getElementById('timerBox');
-const alertBox = document.getElementById('alertBox');
 const roleInfo = document.getElementById('roleInfo');
 const btnRetourMaitre = document.getElementById('btnRetourMaitre');
 const btnRetourJoueur = document.getElementById('btnRetourJoueur');
@@ -81,15 +81,24 @@ function showTimer(sec) {
 function hideTimer() {
   timerBox.classList.add('hidden');
 }
-function showAlert(msg, color) {
-  alertBox.textContent = msg;
-  alertBox.style.background = color || "#da0037";
-  alertBox.classList.remove('hidden');
+function showAlert(msg, color, duration=2000) {
+  const alertDiv = document.getElementById('alertDiv');
+  alertDiv.textContent = msg;
+  alertDiv.style.background = color || "#da0037";
+  alertDiv.classList.remove('hidden');
+  if (alertTimeoutId) {
+    clearTimeout(alertTimeoutId);
+    alertTimeoutId = null;
+  }
+  alertTimeoutId = setTimeout(hideAlert, duration);
 }
 function hideAlert() {
-  alertBox.textContent = "";
-  alertBox.classList.add('hidden');
+  const alertDiv = document.getElementById('alertDiv');
+  if (!alertDiv) return;
+  alertDiv.textContent = "";
+  alertDiv.classList.add('hidden');
 }
+
 function enableJoueurBtns() {
   if (!mort && !isZombie && partieCommencee && !endTriggered) {
     btnDead.disabled = false;
@@ -313,8 +322,7 @@ btnDead.onclick = function() {
     btnZombie.classList.remove('hidden');
     btnZombie.disabled = false;
     socket.emit('dead', { role });
-    showAlert("Tu es mort.");
-    setTimeout(hideAlert, 5000);
+    showAlert("Tu es mort.", "#da0037", 5000);
     enableJoueurBtns();
   }, "Confirmer que tu es mort ?");
 };
@@ -326,8 +334,7 @@ btnZombie.onclick = function() {
     btnZombie.disabled = true;
     btnAction.disabled = true;
     socket.emit('zombie');
-    showAlert("Tu es un zombie.");
-    setTimeout(hideAlert, 5000);
+    showAlert("Tu es un zombie.", "#7900a8", 5000);
     enableJoueurBtns();
   }, "Confirmer que tu deviens un zombie ?");
 };
@@ -350,8 +357,7 @@ btnAction.onclick = function() {
         if (assassinCooldownSabotageEnd > now) {
           let sec = Math.ceil((assassinCooldownSabotageEnd - now)/1000);
           showTimer(sec);
-          showAlert("CD en cours");
-          setTimeout(hideAlert, 1500);
+          showAlert("CD en cours", "#da0037", 1500);
           if (assassinShowTimerSabotageTimeout) clearTimeout(assassinShowTimerSabotageTimeout);
           assassinShowTimerSabotageTimeout = setTimeout(() => hideTimer(), 1500);
           return;
@@ -359,23 +365,20 @@ btnAction.onclick = function() {
         if (sabotagePreparing && assassinDelayEnd > now) {
           let sec = Math.ceil((assassinDelayEnd - now)/1000);
           showTimer(sec);
-          showAlert("Lancement de debuff en cours !", "#f7b801");
-          setTimeout(hideAlert, 1500);
+          showAlert("Lancement de debuff en cours !", "#f7b801", 1500);
           if (assassinDelayShowTimeout) clearTimeout(assassinDelayShowTimeout);
           assassinDelayShowTimeout = setTimeout(() => hideTimer(), 1500);
           return;
         }
         sabotagePreparing = true;
-        showAlert("Bombe lancée !", "#00818a");
-        setTimeout(hideAlert, 1500);
+        showAlert("Bombe lancée !", "#00818a", 1500);
         socket.emit('prepare_sabotage');
       },
       onPanne: function() {
         if (assassinCooldownPanneEnd > now) {
           let sec = Math.ceil((assassinCooldownPanneEnd - now)/1000);
           showTimer(sec);
-          showAlert("CD en cours");
-          setTimeout(hideAlert, 1500);
+          showAlert("CD en cours", "#da0037", 1500);
           if (assassinShowTimerPanneTimeout) clearTimeout(assassinShowTimerPanneTimeout);
           assassinShowTimerPanneTimeout = setTimeout(() => hideTimer(), 1500);
           return;
@@ -383,15 +386,13 @@ btnAction.onclick = function() {
         if (pannePreparing && assassinDelayEnd > now) {
           let sec = Math.ceil((assassinDelayEnd - now)/1000);
           showTimer(sec);
-          showAlert("Lancement de debuff en cours !", "#f7b801");
-          setTimeout(hideAlert, 1500);
+          showAlert("Lancement de debuff en cours !", "#f7b801", 1500);
           if (assassinDelayShowTimeout) clearTimeout(assassinDelayShowTimeout);
           assassinDelayShowTimeout = setTimeout(() => hideTimer(), 1500);
           return;
         }
         pannePreparing = true;
-        showAlert("Panne lancée !", "#00818a");
-        setTimeout(hideAlert, 1500);
+        showAlert("Panne lancée !", "#00818a", 1500);
         socket.emit('prepare_panne');
       },
     oncancel: function() {
@@ -445,8 +446,7 @@ socket.on('sabotageStart', function({ duration }) {
   btnDead.disabled = mort || isZombie;
   setJoueurReturnBtnsState();
   showTimer(duration);
-  showAlert("Sabotage ! Deux joueurs doivent désamorcer ensemble.", "#f7b801");
-  setTimeout(hideAlert, 5000);
+  showAlert("Sabotage ! Deux joueurs doivent désamorcer ensemble.", "#f7b801", 5000);
   if (role !== "maitre" && !mort && !isZombie) {
     try { audioSabotageUp.currentTime = 0; audioSabotageUp.play(); } catch(e){}
   }
@@ -460,8 +460,7 @@ socket.on('sabotageStopped', function() {
   btnDead.disabled = mort || isZombie;
   setJoueurReturnBtnsState();
   hideTimer();
-  showAlert("Sabotage désamorcé !", "#00818a");
-  setTimeout(hideAlert, 2500);
+  showAlert("Sabotage désamorcé !", "#00818a", 2500);
   if (role === "assassin") {
     assassinCooldownSabotageEnd = Date.now() + sabotageCDValue * 1000;
     sabotagePreparing = false;
@@ -478,8 +477,7 @@ socket.on('sabotageFailed', function() {
   btnZombie.disabled = true;
   setJoueurReturnBtnsState();
   hideTimer();
-  showAlert("Sabotage réussi par les assassins ! Fin de partie.");
-  setTimeout(hideAlert, 10000);
+  showAlert("Sabotage réussi par les assassins ! Fin de partie.", "#da0037", 10000);
   if (role !== "maitre") {
     try { audioAssassins.currentTime = 0; audioAssassins.play(); } catch(e){}
   }
@@ -499,8 +497,7 @@ socket.on('panneStart', function({ duration }) {
   btnDead.disabled = mort || isZombie;
   setJoueurReturnBtnsState();
   showTimer(duration);
-  showAlert("Les lampes sont coupées", "#f7b801");
-  setTimeout(hideAlert, 5000);
+  showAlert("Les lampes sont coupées", "#f7b801", 5000);
   if (role !== "maitre" && !mort && !isZombie) {
     try { audioPanneUp.currentTime = 0; audioPanneUp.play(); } catch(e){}
   }
@@ -513,8 +510,7 @@ socket.on('panneStopped', function() {
   btnDead.disabled = mort || isZombie;
   setJoueurReturnBtnsState();
   hideTimer();
-  showAlert("Les lampes sont restaurées", "#00818a");
-  setTimeout(hideAlert, 2500);
+  showAlert("Les lampes sont restaurées", "#00818a", 2500);
   if (role === "assassin") {
     assassinCooldownPanneEnd = Date.now() + panneCDValue * 1000;
     pannePreparing = false;
@@ -539,14 +535,12 @@ socket.on('end', ({ winner }) => {
   setJoueurReturnBtnsState();
   hideTimer();
   if(winner === 'innocents') {
-    showAlert("Victoire des innocents !");
-    setTimeout(hideAlert, 10000);
+    showAlert("Victoire des innocents !", "#00818a", 10000);
     if (role !== "maitre") {
       try { audioInnocents.currentTime = 0; audioInnocents.play(); } catch(e){}
     }
   } else {
-    showAlert("Victoire des assassins !");
-    setTimeout(hideAlert, 10000);
+    showAlert("Victoire des assassins !", "#da0037", 10000);
     if (role !== "maitre") {
       try { audioAssassins.currentTime = 0; audioAssassins.play(); } catch(e){}
     }
@@ -567,8 +561,7 @@ socket.on('necromancien_win', () => {
   btnZombie.disabled = true;
   setJoueurReturnBtnsState();
   hideTimer();
-  showAlert("Victoire du Nécromancien !");
-  setTimeout(hideAlert, 10000);
+  showAlert("Victoire du Nécromancien !", "#7900a8", 10000);
   if (role !== "maitre") {
     try { audioNecromancien.currentTime = 0; audioNecromancien.play(); } catch(e){}
   }
