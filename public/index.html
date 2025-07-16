@@ -419,6 +419,14 @@
         <input id="innocentsInput" type="number" min="1" value="8" />
       </div>
       <div class="form-group">
+        <label for="zombiesToReleverInput">Nombre de zombies à relever :</label>
+        <input id="zombiesToReleverInput" type="number" min="1" value="6"/>
+      </div>
+      <div class="form-group">
+        <label for="debuffDelayInput">Délai application debuff :</label>
+        <input id="debuffDelayInput" type="number" min="1" max="60" value="10" /> s
+      </div>
+      <div class="form-group">
         <label for="sabotageDurationInput">Durée sabotage :</label>
         <input id="sabotageDurationInput" type="number" min="10" max="300" value="40" /> s
       </div>
@@ -427,20 +435,12 @@
         <input id="sabotageCDInput" type="number" min="10" max="600" value="60" /> s
       </div>
       <div class="form-group">
-        <label for="sabotageDelayInput">Délai application sabotage :</label>
-        <input id="sabotageDelayInput" type="number" min="1" max="60" value="10" /> s
-      </div>
-      <div class="form-group">
         <label for="panneDurationInput">Durée panne :</label>
         <input id="panneDurationInput" type="number" min="10" max="300" value="30"/> s
       </div>
       <div class="form-group">
         <label for="panneCDInput">CD entre pannes :</label>
         <input id="panneCDInput" type="number" min="10" max="600" value="90"/> s
-      </div>
-      <div class="form-group">
-        <label for="zombiesToReleverInput">Nombre de zombies à relever :</label>
-        <input id="zombiesToReleverInput" type="number" min="1" value="6"/>
       </div>
       <div class="form-group" style="justify-content:center;">
         <button id="btnStart" class="role-btn innocent-btn">Démarrer la partie</button>

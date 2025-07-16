@@ -30,7 +30,7 @@ function resetGame() {
     sabotageId: 0,
     sabotageDuration: 40,
     sabotageCD: 60,
-    sabotageDelay: 10,
+    debuffDelay: 10,
     sabotageSyncWindow: 1,
     panne: false,
     panneId: 0,
@@ -144,7 +144,7 @@ io.on('connection', (socket) => {
 
   socket.on('start', ({
     assassins, innocents, hacker, necromancien,
-    sabotageDuration, sabotageCD, sabotageDelay, sabotageSyncWindow,
+    sabotageDuration, sabotageCD, debuffDelay, sabotageSyncWindow,
     panneDuration, panneCD,
     zombiesToRelever: zTR
   }) => {
@@ -155,7 +155,7 @@ io.on('connection', (socket) => {
     game.necromancien = parseInt(necromancien, 10) || 0;
     game.sabotageDuration = parseInt(sabotageDuration, 10) || 40;
     game.sabotageCD = parseInt(sabotageCD, 10) || 60;
-    game.sabotageDelay = parseInt(sabotageDelay, 10) || 10;
+    game.debuffDelay = parseInt(debuffDelay, 10) || 10;
     game.sabotageSyncWindow = parseInt(sabotageSyncWindow, 10) || 1;
     game.panneDuration = parseInt(panneDuration, 10) || 20;
     game.panneCD = parseInt(panneCD, 10) || 90;
@@ -230,13 +230,13 @@ io.on('connection', (socket) => {
     // CD entre sabotages
     if (sabotage.lastSabotageEnd && now - sabotage.lastSabotageEnd < game.sabotageCD * 1000) return;
     sabotage.preparing = true;
-    sabotage.prepareEndTime = now + game.sabotageDelay * 1000;
-    io.emit('sabotageDelay', {delay: game.sabotageDelay});
+    sabotage.prepareEndTime = now + game.debuffDelay * 1000;
+    io.emit('debuffDelay', {delay: game.debuffDelay});
     sabotage.prepareTimer = setTimeout(() => {
       sabotage.preparing = false;
       sabotage.prepareTimer = null;
       sabotageStart(game.sabotageDuration);
-    }, game.sabotageDelay * 1000);
+    }, game.debuffDelay * 1000);
   });
 
   socket.on('desamorcage', () => {
@@ -287,13 +287,13 @@ io.on('connection', (socket) => {
     // CD entre pannes
     if (panne.lastPanneEnd && now - panne.lastpanneEnd < game.panneCD * 1000) return;
     panne.preparing = true;
-    panne.prepareEndTime = now + game.sabotageDelay * 1000;
-    io.emit('sabotageDelay', {delay: game.sabotageDelay});
+    panne.prepareEndTime = now + game.debuffDelay * 1000;
+    io.emit('debuffDelay', {delay: game.debuffDelay});
     panne.prepareTimer = setTimeout(() => {
       panne.preparing = false;
       panne.prepareTimer = null;
       panneStart(game.panneDuration);
-    }, game.sabotageDelay * 1000);
+    }, game.debuffDelay * 1000);
   });
 
   function panneStart(duration) {

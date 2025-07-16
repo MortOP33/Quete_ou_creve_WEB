@@ -8,7 +8,7 @@ let panneTryTimeout = null;
 let partieCommencee = false;
 let sabotageDuration = 40;
 let sabotageCDValue = 60;
-let sabotageDelayValue = 10;
+let debuffDelayValue = 10;
 let sabotageClickWindow = 1;
 let sabotageBtnDisableTime = 1;
 let panneDuration = 20;
@@ -37,7 +37,7 @@ const assassinsInput = document.getElementById('assassinsInput');
 const innocentsInput = document.getElementById('innocentsInput');
 const sabotageDurationInput = document.getElementById('sabotageDurationInput');
 const sabotageCDInput = document.getElementById('sabotageCDInput');
-const sabotageDelayInput = document.getElementById('sabotageDelayInput');
+const debuffDelayInput = document.getElementById('debuffDelayInput');
 const panneDurationInput = document.getElementById('panneDurationInput');
 const panneCDInput = document.getElementById('panneCDInput');
 const zombiesToReleverInput = document.getElementById('zombiesToReleverInput');
@@ -258,13 +258,13 @@ btnStart.onclick = function() {
   const innocents = parseInt(innocentsInput.value, 10) || 1;
   sabotageDuration = parseInt(sabotageDurationInput.value, 10) || 40;
   sabotageCDValue = parseInt(sabotageCDInput.value, 10) || 60;
-  sabotageDelayValue = parseInt(sabotageDelayInput.value, 10) || 10;
+  debuffDelayValue = parseInt(debuffDelayInput.value, 10) || 10;
   panneDuration = parseInt(panneDurationInput.value, 10) || 20;
   panneCDValue = parseInt(panneCDInput.value, 10) || 90;
   const zombiesToRelever = parseInt(zombiesToReleverInput.value, 10) || 6;
   socket.emit('start', {
     assassins, innocents,
-    sabotageDuration, sabotageCD: sabotageCDValue, sabotageDelay: sabotageDelayValue,
+    sabotageDuration, sabotageCD: sabotageCDValue, debuffDelay: debuffDelayValue,
     sabotageSyncWindow: 1,
     panneDuration, panneCD: panneCDValue,
     zombiesToRelever
@@ -559,9 +559,9 @@ socket.on('necromancien_win', () => {
   pannePreparing = true;
 });
 
-socket.on('sabotageDelay', ({delay}) => {
+socket.on('debuffDelay', ({delay}) => {
   const now = Date.now();
-  sabotageDelayValue = delay;
+  debuffDelayValue = delay;
   assassinDelayEnd = now + delay*1000;
   sabotagePreparing = true;
   pannePreparing = true;
