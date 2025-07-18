@@ -480,6 +480,9 @@ socket.on('sabotageFailed', function() {
   showAlert("Sabotage réussi par les assassins ! Fin de partie.", "#da0037", 10000);
   if (role !== "maitre") {
     try { audioAssassins.currentTime = 0; audioAssassins.play(); } catch(e){}
+    setTimeout(() => showPage('role'), 10000);
+    setTimeout(() => role = null, 10000);
+    setTimeout(() => resetJoueurStateUI(), 10000);
   }
   enableJoueurReturnBtns();
   btnReset && (btnReset.disabled = false);
@@ -538,11 +541,17 @@ socket.on('end', ({ winner }) => {
     showAlert("Victoire des innocents !", "#00818a", 10000);
     if (role !== "maitre") {
       try { audioInnocents.currentTime = 0; audioInnocents.play(); } catch(e){}
+      setTimeout(() => showPage('role'), 10000);
+      setTimeout(() => role = null, 10000);
+      setTimeout(() => resetJoueurStateUI(), 10000);
     }
   } else {
     showAlert("Victoire des assassins !", "#da0037", 10000);
     if (role !== "maitre") {
       try { audioAssassins.currentTime = 0; audioAssassins.play(); } catch(e){}
+      setTimeout(() => showPage('role'), 10000);
+      setTimeout(() => role = null, 10000);
+      setTimeout(() => resetJoueurStateUI(), 10000);
     }
   }
   enableJoueurReturnBtns();
@@ -564,6 +573,9 @@ socket.on('necromancien_win', () => {
   showAlert("Victoire du Nécromancien !", "#7900a8", 10000);
   if (role !== "maitre") {
     try { audioNecromancien.currentTime = 0; audioNecromancien.play(); } catch(e){}
+    setTimeout(() => showPage('role'), 10000);
+    setTimeout(() => role = null, 10000);
+    setTimeout(() => resetJoueurStateUI(), 10000);
   }
   enableJoueurReturnBtns();
   btnReset && (btnReset.disabled = false);
