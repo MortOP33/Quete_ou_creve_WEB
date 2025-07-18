@@ -91,6 +91,10 @@
     }
     .maitre-btn { background: #273043; }
     .maitre-btn:hover, .maitre-btn:focus { background: #444d5a; }
+    .maitre-btn[disabled] {
+      background: #888;
+      cursor: default;
+    }
     .maitrereturn-btn {
       position: absolute;
       top: 1rem;
@@ -201,7 +205,16 @@
     }
     .action-btn { background: #00818a; margin-top: 32px; }
     .debuff-btn { background: #f7b801; color: #191b1f; margin-top: 32px; }
+    .dead-btn { background:#da0037; }
+    .dead-btn[disabled] {
+      background: #888;
+      cursor: default;
+    }
     .zombie-btn { background: #7900a8; color: #fff; }
+    .zombie-btn[disabled] {
+      background: #888;
+      cursor: default;
+    }
     .bottom-labels-box {
       width: 90vw;
       max-width: 400px;
@@ -457,7 +470,7 @@
       <button id="btnRoleToggle" type="button">Afficher rôle</button>
     </div>
     <div id="roleInfo" class="subtitle"></div>
-    <button id="btnDead" class="big-btn" style="background:#da0037;">Je suis mort !</button>
+    <button id="btnDead" class="big-btn dead-btn">Je suis mort !</button>
     <button id="btnZombie" class="big-btn zombie-btn hidden">Je suis un zombie !</button>
     <button id="btnAction" class="big-btn action-btn">Action</button>
     <div class="bottom-labels-box">

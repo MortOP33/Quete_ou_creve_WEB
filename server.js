@@ -141,7 +141,21 @@ io.on('connection', (socket) => {
   socket.on('setRole', ({role}) => {
     if (['maitre', 'innocent', 'assassin','hacker','necromancien'].includes(role)) {
       players[socket.id] = {role, mort: false, zombie: false};
+      players[socket.id].role = role;
+      emitState();
     }
+  });
+
+  socket.on('leaveRole', () => {
+    if (players[socket.id]) {
+      players[socket.id].role = undefined;
+      emitState();
+    }
+  });
+
+  socket.on('disconnect', () => {
+    delete players[socket.id];
+    emitState();
   });
 
   socket.on('start', ({

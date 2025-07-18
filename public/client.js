@@ -105,15 +105,15 @@ function enableJoueurBtns() {
     btnAction.disabled = false;
     btnZombie.disabled = true;
     btnRetourJoueur.disabled = false;
-  } else if (mort && partieCommencee && !endTriggered) {
-    btnDead.disabled = true;
-    btnAction.disabled = true;
-    btnZombie.disabled = false;
-    btnRetourJoueur.disabled = true;
   } else if (isZombie && partieCommencee && !endTriggered) {
     btnDead.disabled = true;
     btnAction.disabled = true;
     btnZombie.disabled = true;
+    btnRetourJoueur.disabled = true;
+  } else if (mort && partieCommencee && !endTriggered) {
+    btnDead.disabled = true;
+    btnAction.disabled = true;
+    btnZombie.disabled = false;
     btnRetourJoueur.disabled = true;
   } else if (!partieCommencee && !endTriggered) {
     btnDead.disabled = true;
@@ -420,7 +420,9 @@ socket.on('debut_partie', () => {
 socket.on('state', (state) => {
   partieCommencee = state.started;
   const btnMaitre = document.getElementById('btnMaitre');
-  if (btnMaitre) btnMaitre.disabled = !!state.maitrePris;
+  if (btnMaitre) {
+    btnMaitre.disabled = !!state.maitrePris;
+  }
   if(role === 'maitre') {
     maitreState.textContent =
       `Assassins morts : ${state.assassinsDead}/${state.assassins} | Innocents morts : ${state.innocentsDead}/${state.innocents}`;
@@ -614,8 +616,20 @@ function unlockAudio() {
 }
 document.addEventListener('click', unlockAudio);
 
+document.addEventListener('DOMContentLoaded', () => {
+  const btnMaitre = document.getElementById('btnMaitre');
+  if (btnMaitre) {
+    btnMaitre.addEventListener('click', () => {
+      socket.emit('chooseRole', 'maitre');
+    });
+  }
+});
+
 function showPage(page) {
   rolePage.classList.toggle('hidden', page !== 'role');
+  if (page === 'role') {
+    socket.emit('leaveRole');
+  }
   maitrePage.classList.toggle('hidden', page !== 'maitre');
   joueurPage.classList.toggle('hidden', page !== 'joueur');
   document.getElementById('confirmPopup').classList.add('hidden');
