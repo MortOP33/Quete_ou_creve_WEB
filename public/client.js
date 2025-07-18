@@ -418,6 +418,7 @@ socket.on('debut_partie', () => {
 });
 
 socket.on('state', (state) => {
+  if (btnMaitre) btnMaitre.disabled = !!state.maitrePris;
   partieCommencee = state.started;
   if(role === 'maitre') {
     maitreState.textContent =
