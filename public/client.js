@@ -418,8 +418,9 @@ socket.on('debut_partie', () => {
 });
 
 socket.on('state', (state) => {
-  if (btnMaitre) btnMaitre.disabled = !!state.maitrePris;
   partieCommencee = state.started;
+  const btnMaitre = document.getElementById('btnMaitre');
+  if (btnMaitre) btnMaitre.disabled = !!state.maitrePris;
   if(role === 'maitre') {
     maitreState.textContent =
       `Assassins morts : ${state.assassinsDead}/${state.assassins} | Innocents morts : ${state.innocentsDead}/${state.innocents}`;

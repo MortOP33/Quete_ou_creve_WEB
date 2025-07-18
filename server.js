@@ -65,11 +65,6 @@ function resetGame() {
 }
 resetGame();
 
-function broadcastMaitreStatus() {
-  const isMaitreTaken = Object.values(players).some(player => player.role === 'maitre');
-  io.emit('maitreStatus', { taken: isMaitreTaken });
-}
-
 function emitState() {
   const maitrePris = Object.values(players).some(player => player.role === 'maitre');
   io.emit('state', {
