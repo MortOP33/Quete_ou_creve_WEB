@@ -116,6 +116,7 @@ function stopPanne() {
 function checkEndGame() {
   if (game.assassinsDead >= game.assassins && game.assassins > 0) {
     stopSabotage();
+    stopPanne();
     io.emit('end', {winner: 'innocents'});
     for (const [socketId, player] of Object.entries(players)) {
       if(player.role === 'maitre') io.to(socketId).emit('reset');
@@ -126,6 +127,7 @@ function checkEndGame() {
   }
   if (game.innocentsDead + game.hackerDead + game.necromancienDead >= game.innocents + game.hacker + game.necromancien  > 0) {
     stopSabotage();
+    stopPanne();
     io.emit('end', {winner: 'assassins'});
     for (const [socketId, player] of Object.entries(players)) {
       if(player.role === 'maitre') io.to(socketId).emit('reset');
