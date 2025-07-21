@@ -512,7 +512,8 @@ socket.on('panneStart', function({ duration }) {
   btnReset && (btnReset.disabled = true);
   pannePreparing = false;
 });
-socket.on('panneStopped', function() {
+socket.on('panneStopped', ({delay}) => {
+  panneCDValue = delay;
   panneEnCours = false;
   setActionButtonForRole();
   btnDead.disabled = mort || isZombie;

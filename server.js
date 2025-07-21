@@ -327,7 +327,7 @@ io.on('connection', (socket) => {
       io.emit('debuffTimer', {seconds: remaining});
       if (remaining <= 0) {
         stopPanne();
-        io.emit('panneStopped');
+        io.emit('panneStopped', {delay: game.panneCD});
         emitState();
       }
     }, 1000);
