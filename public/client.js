@@ -458,7 +458,8 @@ socket.on('sabotageStart', function({ duration }) {
   sabotagePreparing = false;
   lastDesamorcage = 0;
 });
-socket.on('sabotageStopped', function() {
+socket.on('sabotageStopped', ({delay}) => {
+  sabotageCDValue = delay;
   sabotageEnCours = false;
   setActionButtonForRole();
   btnDead.disabled = mort || isZombie;

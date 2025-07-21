@@ -267,7 +267,7 @@ io.on('connection', (socket) => {
       const [a, b] = sabotage.clicks;
       if (a.id !== b.id && Math.abs(a.at - b.at) <= (game.sabotageSyncWindow || 1) * 1000) {
         stopSabotage();
-        io.emit('sabotageStopped');
+        io.emit('sabotageStopped', {delay: game.sabotageCD});
         emitState();
       }
     }
