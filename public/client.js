@@ -410,6 +410,14 @@ btnAction.addEventListener('click', function() {
     if (now - lastDesamorcage < 1000) return;
     lastDesamorcage = now;
     socket.emit('desamorcage');
+    if (btnAction.textContent === "Désamorcer") {
+      btnAction.disabled = true;
+      setTimeout(() => {
+        if(btnAction.dataset.state === "debuff") {
+          btnAction.disabled = false;
+        }
+      }, 3000);
+    }
   }
 });
 
