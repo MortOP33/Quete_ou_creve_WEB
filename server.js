@@ -124,8 +124,7 @@ function checkEndGame() {
     resetGame();
     emitState();
     return true;
-  }
-  if (game.innocentsDead + game.hackerDead + game.necromancienDead >= game.innocents + game.hacker + game.necromancien  > 0) {
+  } else if (game.innocentsDead + game.hackerDead + game.necromancienDead >= game.innocents + game.hacker + game.necromancien  > 0) {
     stopSabotage();
     stopPanne();
     io.emit('end', {winner: 'assassins'});
@@ -336,7 +335,10 @@ io.on('connection', (socket) => {
   socket.on('reset', () => {
     stopSabotage();
     stopPanne();
-    io.emit('reset');
+    io.emit('end', {winner: 'none'});
+    for (const [socketId, player] of Object.entries(players)) {
+      if(player.role === 'maitre') io.to(socketId).emit('reset');
+    }
     resetGame();
     emitState();
   });

@@ -559,13 +559,19 @@ socket.on('end', ({ winner }) => {
       setTimeout(() => role = null, 10000);
       setTimeout(() => resetJoueurStateUI(), 10000);
     }
-  } else {
+  } else if (winner === 'assassins') {
     showAlert("Victoire des assassins !", "#da0037", 10000);
     if (role !== "maitre") {
       try { audioAssassins.currentTime = 0; audioAssassins.play(); } catch(e){}
       setTimeout(() => showPage('role'), 10000);
       setTimeout(() => role = null, 10000);
       setTimeout(() => resetJoueurStateUI(), 10000);
+    }
+  } else {
+    if (role !== "maitre") {
+      showPage('role')
+      role = null
+      resetJoueurStateUI()
     }
   }
   enableJoueurReturnBtns();
