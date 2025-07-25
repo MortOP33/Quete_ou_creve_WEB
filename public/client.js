@@ -169,40 +169,46 @@ function showHackerPopup({ onSelect, onCancel }) {
   btnRow.innerHTML = '';
   btnRow.style.display = "flex";
   btnRow.style.flexDirection = "column";
-  const joueursAffichables = joueursState.filter(j =>
-    (j.role === 'innocent' || j.role === 'assassin' || j.role === 'hacker' || j.role === 'necromancien')
-    && j.id !== socket.id
-    && j.pseudo
+   let joueursAffichables = joueursState.filter(j =>
+    (['innocent', 'assassin', 'hacker', 'necromancien'].includes(j.role)) &&
+    j.id !== socket.id &&
+    j.pseudo
   );
-  //joueursAffichables = joueursAffichables
-  //  .map(j => ({ j, sort: Math.random() }))
-  //  .sort((a, b) => a.sort - b.sort)
-  //  .map(({ j }) => j);
-  //joueursAffichables = joueursAffichables.slice(0, 4);
-  let lineDiv = document.createElement('div'); // ligne courante
-  lineDiv.style.display = "flex";
-  lineDiv.style.flexDirection = "row";
-  lineDiv.style.justifyContent = "center";
-  lineDiv.style.marginBottom = "8px";
-  joueursAffichables.forEach((j, idx) => {
-    const btn = document.createElement('button');
-    btn.className = "popup-btn";
-    btn.textContent = j.pseudo;
-    btn.onclick = () => {
+  joueursAffichables = joueursAffichables
+    .map(j => ({ ...j, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(j => {
+      const { sort, ...rest } = j;
+      return rest;
+    });
+  joueursAffichables = joueursAffichables.slice(0, 4);
+  for (let i = 0; i < joueursAffichables.length; i += 2) {
+    const lineDiv = document.createElement('div');
+    lineDiv.style.display = "flex";
+    lineDiv.style.flexDirection = "row";
+    lineDiv.style.justifyContent = "center";
+    lineDiv.style.marginBottom = "8px";
+    const btn1 = document.createElement('button');
+    btn1.className = "popup-btn";
+    btn1.textContent = joueursAffichables[i].pseudo;
+    btn1.onclick = () => {
       hackerPopup.classList.add('hidden');
-      onSelect && onSelect(j);
+      onSelect && onSelect(joueursAffichables[i]);
     };
-    btn.style.marginRight = "8px";
-    lineDiv.appendChild(btn);
-    if ((idx + 1) % 2 === 0 || idx === joueursAffichables.length - 1) {
-      btnRow.appendChild(lineDiv);
-      lineDiv = document.createElement('div');
-      lineDiv.style.display = "flex";
-      lineDiv.style.flexDirection = "row";
-      lineDiv.style.justifyContent = "center";
-      lineDiv.style.marginBottom = "8px";
+    btn1.style.marginRight = "8px";
+    lineDiv.appendChild(btn1);
+    if (i + 1 < joueursAffichables.length) {
+      const btn2 = document.createElement('button');
+      btn2.className = "popup-btn";
+      btn2.textContent = joueursAffichables[i + 1].pseudo;
+      btn2.onclick = () => {
+        hackerPopup.classList.add('hidden');
+        onSelect && onSelect(joueursAffichables[i + 1]);
+      };
+      lineDiv.appendChild(btn2);
     }
-  });
+    btnRow.appendChild(lineDiv);
+  }
   const btnCancel = document.getElementById('popupHackerCancel');
   btnCancel.onclick = () => {
     hackerPopup.classList.add('hidden');
