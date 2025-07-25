@@ -71,6 +71,7 @@ const assassinActionPopup = document.getElementById('assassinActionPopup');
 const popupAssassinBombe = document.getElementById('popupAssassinBombe');
 const popupAssassinPanne = document.getElementById('popupAssassinPanne');
 const popupAssassinCancel = document.getElementById('popupAssassinCancel');
+const hackerPopup = document.getElementById('hackerPopup');
 
 function showTimer(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -163,6 +164,52 @@ function showAssassinActionPopup({ onBombe, onPanne, onCancel }) {
     popupAssassinCancel.onclick = null;
   }
 }
+function showHackerPopup({ onSelect, onCancel }) {
+  const btnRow = hackerPopup.querySelector('.popup-btn-row');
+  btnRow.innerHTML = '';
+  btnRow.style.display = "flex";
+  btnRow.style.flexDirection = "column";
+  const joueursAffichables = joueursState.filter(j =>
+    (j.role === 'innocent' || j.role === 'assassin' || j.role === 'hacker' || j.role === 'necromancien')
+    && j.id !== socket.id
+    && j.pseudo
+  );
+  //joueursAffichables = joueursAffichables
+  //  .map(j => ({ j, sort: Math.random() }))
+  //  .sort((a, b) => a.sort - b.sort)
+  //  .map(({ j }) => j);
+  //joueursAffichables = joueursAffichables.slice(0, 4);
+  let lineDiv = document.createElement('div'); // ligne courante
+  lineDiv.style.display = "flex";
+  lineDiv.style.flexDirection = "row";
+  lineDiv.style.justifyContent = "center";
+  lineDiv.style.marginBottom = "8px";
+  joueursAffichables.forEach((j, idx) => {
+    const btn = document.createElement('button');
+    btn.className = "popup-btn";
+    btn.textContent = j.pseudo;
+    btn.onclick = () => {
+      hackerPopup.classList.add('hidden');
+      onSelect && onSelect(j);
+    };
+    btn.style.marginRight = "8px";
+    lineDiv.appendChild(btn);
+    if ((idx + 1) % 2 === 0 || idx === joueursAffichables.length - 1) {
+      btnRow.appendChild(lineDiv);
+      lineDiv = document.createElement('div');
+      lineDiv.style.display = "flex";
+      lineDiv.style.flexDirection = "row";
+      lineDiv.style.justifyContent = "center";
+      lineDiv.style.marginBottom = "8px";
+    }
+  });
+  const btnCancel = document.getElementById('popupHackerCancel');
+  btnCancel.onclick = () => {
+    hackerPopup.classList.add('hidden');
+    onCancel && onCancel();
+  };
+  hackerPopup.classList.remove('hidden');
+}
 
 function resetJoueurStateUI() {
   mort = false;
@@ -230,38 +277,23 @@ btnMaitre.onclick = function() {
   enableMaitreReturnBtn();
   socket.emit('setRole', { role: 'maitre' });
 };
-btnInnocent.onclick = function() {
-  role = 'innocent';
-  showPage('joueur');
+
+function chooseRole(roleName) {
+  const pseudo = document.getElementById('pseudoInput').value.trim();
+  if (!pseudo) { alert("Entrez un pseudo avant de jouer !"); return; }
+  role = roleName;
+  showPage(roleName === 'maitre' ? 'maitre' : 'joueur');
   resetJoueurStateUI();
   setActionButtonForRole();
-  socket.emit('setRole', { role: 'innocent' });
-  setTimeout(() => enableJoueurBtns(), 150);
-};
-btnAssassin.onclick = function() {
-  role = 'assassin';
-  showPage('joueur');
-  resetJoueurStateUI();
-  setActionButtonForRole();
-  socket.emit('setRole', { role: 'assassin' });
-  setTimeout(() => enableJoueurBtns(), 150);
-};
-btnHacker.onclick = function() {
-  role = 'hacker';
-  showPage('joueur');
-  resetJoueurStateUI();
-  setActionButtonForRole();
-  socket.emit('setRole', { role: 'hacker' });
-  setTimeout(() => enableJoueurBtns(), 150);
-};
-btnNecro.onclick = function() {
-  role = 'necromancien';
-  showPage('joueur');
-  resetJoueurStateUI();
-  setActionButtonForRole();
-  socket.emit('setRole', { role: 'necromancien' });
-  setTimeout(() => enableJoueurBtns(), 150);
-};
+  socket.emit('setRole', { role: roleName, pseudo });
+  if (roleName !== 'maitre') setTimeout(() => enableJoueurBtns(), 150);
+}
+
+btnInnocent.onclick = function() { chooseRole('innocent'); };
+btnAssassin.onclick = function() { chooseRole('assassin'); };
+btnHacker.onclick = function() { chooseRole('hacker'); };
+btnNecro.onclick = function() { chooseRole('necromancien'); };
+
 btnStart.onclick = function() {
   const assassins = parseInt(assassinsInput.value, 10) || 1;
   const innocents = parseInt(innocentsInput.value, 10) || 1;
@@ -342,7 +374,7 @@ btnZombie.onclick = function() {
 btnAction.onclick = function() {
   if (mort || endTriggered || isZombie) return;
   if (btnAction.dataset.state === "debuff") return;
-  if (role === "innocent" || role === "hacker") {
+  if (role === "innocent") {
     showConfirmPopup((ok) => {
       if (!ok) return;
       btnAction.disabled = true;
@@ -399,6 +431,15 @@ btnAction.onclick = function() {
       return;
     }
     });
+  } else if (role === "hacker") {
+    showHackerPopup({
+      onSelect: function(joueur) {
+        // Action à définir plus tard
+        showAlert("Tu as sélectionné " + joueur.pseudo, "#00818a", 2000);
+      },
+      onCancel: function() {}
+    });
+    return;
   } else if (role === "necromancien") {
     // Aucune action
   }
@@ -425,8 +466,10 @@ socket.on('debut_partie', () => {
   try { audioDebutPartie.currentTime = 0; audioDebutPartie.play(); } catch(e){}
 });
 
+let joueursState = [];
 socket.on('state', (state) => {
   partieCommencee = state.started;
+  joueursState = state.joueurs || [];
   const btnMaitre = document.getElementById('btnMaitre');
   if (btnMaitre) {
     btnMaitre.disabled = !!state.maitrePris;

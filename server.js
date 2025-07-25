@@ -67,8 +67,14 @@ resetGame();
 
 function emitState() {
   const maitrePris = Object.values(players).some(player => player.role === 'maitre');
+  const joueurs = Object.entries(players).map(([id, data]) => ({
+    id,
+    pseudo: data.pseudo || '',
+    role: data.role || ''
+  }));
   io.emit('state', {
     maitrePris: maitrePris,
+    joueurs: joueurs,
     assassins: game.assassins,
     innocents: game.innocents,
     hacker: game.hacker,
@@ -139,10 +145,9 @@ function checkEndGame() {
 }
 
 io.on('connection', (socket) => {
-  socket.on('setRole', ({role}) => {
+  socket.on('setRole', ({role, pseudo}) => {
     if (['maitre', 'innocent', 'assassin','hacker','necromancien'].includes(role)) {
-      players[socket.id] = {role, mort: false, zombie: false};
-      players[socket.id].role = role;
+      players[socket.id] = {role, mort: false, zombie: false, pseudo: (pseudo||'')};
       emitState();
     }
   });

@@ -140,6 +140,12 @@
       width: 128px;
       height: 128px;
     }
+    #pseudoBlock {
+      margin-top: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: center;
+    }
     .role-row {
       display: flex;
       flex-direction: row;
@@ -407,6 +413,10 @@
       <div id="qr-container">
         <div id="qrcode"></div>
       </div>
+      <div id="pseudoBlock">
+        <label for="pseudoInput">Pseudo : </label>
+        <input type="text" id="pseudoInput" maxlength="10" />
+      </div>
     </div>
     <div class="role-row">
       <button id="btnInnocent" class="role-btn innocent-btn">Innocent</button>
@@ -498,6 +508,14 @@
       </div>
       <button id="popupAssassinCancel" class="popup-btn cancel">Annuler</button>
     </div>
+  </div>
+  <div id="hackerPopup" class="popup-backdrop hidden">
+    <div class="popup-box">
+      <div style="margin-bottom:12px;">Choix de la cible !</div>
+      <div class="popup-btn-row" style="margin-bottom:12px;"">  
+      </div>
+      <button id="popupHackerCancel" class="popup-btn cancel">Annuler</button>
+    </div>    
   </div>
   <script src="client.js"></script>
 </body>
