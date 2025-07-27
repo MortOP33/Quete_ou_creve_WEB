@@ -216,6 +216,11 @@
       background: #888;
       cursor: default;
     }
+    .hack-btn { background: #1d8f34; color: #fff; }
+    .hack-btn[disabled] {
+      background: #888;
+      cursor: default;
+    }
     .zombie-btn { background: #7900a8; color: #fff; }
     .zombie-btn[disabled] {
       background: #888;
@@ -415,7 +420,7 @@
       </div>
       <div id="pseudoBlock">
         <label for="pseudoInput">Pseudo : </label>
-        <input type="text" id="pseudoInput" maxlength="10" />
+        <input type="text" id="pseudoInput" maxlength="16" spellcheck="false" autocomplete="off" />
       </div>
     </div>
     <div class="role-row">
@@ -465,6 +470,14 @@
         <label for="panneCDInput">CD entre pannes :</label>
         <input id="panneCDInput" type="number" min="10" max="600" value="90"/> s
       </div>
+      <div class="form-group">
+        <label for="hackDurationInput">Durée hack :</label>
+        <input id="hackDurationInput" type="number" min="10" max="300" value="60"/> s
+      </div>
+      <div class="form-group">
+        <label for="hackCDInput">CD entre hacks :</label>
+        <input id="hackCDInput" type="number" min="10" max="600" value="90"/> s
+      </div>
       <div class="form-group" style="justify-content:center;">
         <button id="btnStart" class="role-btn innocent-btn">Démarrer la partie</button>
       </div>
@@ -481,6 +494,7 @@
     </div>
     <div id="roleInfo" class="subtitle"></div>
     <button id="btnDead" class="big-btn dead-btn">Je suis mort !</button>
+    <button id="btnHack" class="big-btn hack-btn hidden">Hacké !</button>
     <button id="btnZombie" class="big-btn zombie-btn hidden">Je suis un zombie !</button>
     <button id="btnAction" class="big-btn action-btn">Action</button>
     <div class="bottom-labels-box">

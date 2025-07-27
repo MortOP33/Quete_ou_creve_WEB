@@ -13,6 +13,9 @@ let sabotageClickWindow = 1;
 let sabotageBtnDisableTime = 1;
 let panneDuration = 20;
 let panneCDValue = 90;
+let hackDuration = 60;
+let hackCDValue = 90;
+let hackdebuffDelayValue = 10;
 let assassinCooldownSabotageEnd = 0;
 let assassinCooldownPanneEnd = 0;
 let assassinDelayEnd = 0;
@@ -25,6 +28,14 @@ let endTriggered = false;
 let lastDesamorcage = 0;
 let isZombie = false;
 let alertTimeoutId = null;
+let hackCooldownEnd = 0;
+let hackerShowTimerTimeout = null;
+let hackerDelayShowTimeout = null;
+let hackPreparing = false;
+let hackerDelayEnd = 0;
+let isHacked = false;
+let hackedTimerEnd = 0;
+let hackedTimerInterval = null;
 
 const rolePage = document.getElementById('rolePage');
 const maitrePage = document.getElementById('maitrePage');
@@ -41,6 +52,9 @@ const sabotageCDInput = document.getElementById('sabotageCDInput');
 const debuffDelayInput = document.getElementById('debuffDelayInput');
 const panneDurationInput = document.getElementById('panneDurationInput');
 const panneCDInput = document.getElementById('panneCDInput');
+const hackDurationInput = document.getElementById('hackDurationInput');
+const hackCDInput = document.getElementById('hackCDInput');
+const hackdebuffDelayInput = document.getElementById('debuffDelayInput');
 const zombiesToReleverInput = document.getElementById('zombiesToReleverInput');
 const btnStart = document.getElementById('btnStart');
 const btnReset = document.getElementById('btnReset');
@@ -48,6 +62,7 @@ const maitreState = document.getElementById('maitreState');
 const configPanel = document.getElementById('configPanel');
 const suiviPanel = document.getElementById('suiviPanel');
 const btnDead = document.getElementById('btnDead');
+const btnHack = document.getElementById('btnHack');
 const btnZombie = document.getElementById('btnZombie');
 const btnAction = document.getElementById('btnAction');
 const timerBox = document.getElementById('timerBox');
@@ -172,16 +187,15 @@ function showHackerPopup({ onSelect, onCancel }) {
    let joueursAffichables = joueursState.filter(j =>
     (['innocent', 'assassin', 'hacker', 'necromancien'].includes(j.role)) &&
     j.id !== socket.id &&
-    j.pseudo
+    j.pseudo &&
+    !j.mort &&
+    !j.zombie
   );
   joueursAffichables = joueursAffichables
     .map(j => ({ ...j, sort: Math.random() }))
     .sort((a, b) => a.sort - b.sort)
-    .map(j => {
-      const { sort, ...rest } = j;
-      return rest;
-    });
-  joueursAffichables = joueursAffichables.slice(0, 4);
+    .map(j => { const { sort, ...rest } = j; return rest; })
+    .slice(0, 4);
   for (let i = 0; i < joueursAffichables.length; i += 2) {
     const lineDiv = document.createElement('div');
     lineDiv.style.display = "flex";
@@ -190,7 +204,18 @@ function showHackerPopup({ onSelect, onCancel }) {
     lineDiv.style.marginBottom = "8px";
     const btn1 = document.createElement('button');
     btn1.className = "popup-btn";
-    btn1.textContent = joueursAffichables[i].pseudo;
+    let pseudo1 = joueursAffichables[i].pseudo;
+    btn1.textContent = pseudo1;
+    btn1.style.textAlign = "center";
+    btn1.style.fontSize = "0.85em";
+    btn1.style.width = "140px";
+    btn1.style.maxWidth = "140px";
+    btn1.style.minWidth = "140px";
+    btn1.style.height = "48px";
+    btn1.style.padding = "5px 5px"
+    btn1.style.overflow = "hidden";
+    btn1.style.textOverflow = "ellipsis";
+    btn1.style.whiteSpace = "nowrap";
     btn1.onclick = () => {
       hackerPopup.classList.add('hidden');
       onSelect && onSelect(joueursAffichables[i]);
@@ -200,7 +225,18 @@ function showHackerPopup({ onSelect, onCancel }) {
     if (i + 1 < joueursAffichables.length) {
       const btn2 = document.createElement('button');
       btn2.className = "popup-btn";
-      btn2.textContent = joueursAffichables[i + 1].pseudo;
+      let pseudo2 = joueursAffichables[i + 1].pseudo;
+      btn2.textContent = pseudo2;
+      btn2.style.textAlign = "center";
+      btn2.style.fontSize = "0.85em";
+      btn2.style.width = "140px";
+      btn2.style.maxWidth = "140px";
+      btn2.style.minWidth = "140px";
+      btn2.style.height = "48px";
+      btn2.style.padding = "5px 5px"
+      btn2.style.overflow = "hidden";
+      btn2.style.textOverflow = "ellipsis";
+      btn2.style.whiteSpace = "nowrap";
       btn2.onclick = () => {
         hackerPopup.classList.add('hidden');
         onSelect && onSelect(joueursAffichables[i + 1]);
@@ -221,9 +257,11 @@ function resetJoueurStateUI() {
   mort = false;
   sabotageEnCours = false;
   panneEnCours = false;
+  btnHack.disabled = false;
   isZombie = false;
   btnDead.disabled = true;
   btnDead.classList.remove('hidden');
+  btnHack.classList.add('hidden');
   btnZombie.classList.add('hidden');
   btnZombie.disabled = false;
   btnAction.disabled = true;
@@ -243,6 +281,13 @@ function resetJoueurStateUI() {
   pannePreparing = false;
   endTriggered = false;
   lastDesamorcage = 0;
+  hackCooldownEnd = 0;
+  hackPreparing = false;
+  hackerDelayEnd = 0;
+  isHacked = false;
+  hackedTimerEnd = 0;
+  if (hackedTimerInterval) clearInterval(hackedTimerInterval);
+  hackedTimerInterval = null;
 }
 function enableJoueurReturnBtns() {
   btnRetourJoueur.disabled = false;
@@ -308,12 +353,16 @@ btnStart.onclick = function() {
   debuffDelayValue = parseInt(debuffDelayInput.value, 10) || 10;
   panneDuration = parseInt(panneDurationInput.value, 10) || 20;
   panneCDValue = parseInt(panneCDInput.value, 10) || 90;
+  hackDuration = parseInt(hackDurationInput.value, 10) || 60;
+  hackCDValue = parseInt(hackCDInput.value, 10) || 90;
+  hackdebuffDelayValue = parseInt(hackdebuffDelayInput.value, 10) || 10;
   const zombiesToRelever = parseInt(zombiesToReleverInput.value, 10) || 6;
   socket.emit('start', {
     assassins, innocents,
     sabotageDuration, sabotageCD: sabotageCDValue, debuffDelay: debuffDelayValue,
     sabotageSyncWindow: 1,
     panneDuration, panneCD: panneCDValue,
+    hackDuration, hackCD: hackCDValue,
     zombiesToRelever
   });
   configPanel.classList.add('hidden');
@@ -363,6 +412,17 @@ btnDead.onclick = function() {
     showAlert("Tu es mort.", "#da0037", 5000);
     enableJoueurBtns();
   }, "Confirmer que tu es mort ?");
+};
+btnHack.onclick = function() {
+  //if (mort || isZombie || endTriggered || !isHacked) return;
+  //socket.emit('restore_hack');
+  //clearInterval(hackedTimerInterval);
+  //hackedTimerInterval = null;
+  //isHacked = false;
+  //btnHack.classList.add('hidden');
+  //btnDead.classList.remove('hidden');
+  //btnDead.disabled = false;
+  //showAlert('Système rétabli !', '#00818a', 2500);
 };
 btnZombie.onclick = function() {
   if (isZombie) return;
@@ -438,10 +498,28 @@ btnAction.onclick = function() {
     }
     });
   } else if (role === "hacker") {
+    const now = Date.now();
+    if (hackCooldownEnd > now) {
+      let sec = Math.ceil((hackCooldownEnd - now)/1000);
+      showTimer(sec);
+      showAlert("CD en cours", "#da0037", 1500);
+      if (hackerShowTimerTimeout) clearTimeout(hackerShowTimerTimeout);
+      hackerShowTimerTimeout = setTimeout(() => hideTimer(), 1500);
+      return;
+    }
+    if (hackPreparing && hackerDelayEnd > now) {
+      let sec = Math.ceil((hackerDelayEnd - now)/1000);
+      showTimer(sec);
+      showAlert("Envoi de hack en cours !", "#f7b801", 1500);
+      if (hackerDelayShowTimeout) clearTimeout(hackerDelayShowTimeout);
+      hackerDelayShowTimeout = setTimeout(() => hideTimer(), 1500);
+      return;
+    }
     showHackerPopup({
       onSelect: function(joueur) {
-        // Action à définir plus tard
-        showAlert("Tu as sélectionné " + joueur.pseudo, "#00818a", 2000);
+        hackPreparing = true;
+        showAlert("Hack envoyé à " + joueur.pseudo, "#00818a", 1500);
+        socket.emit('prepare_hack', { cibleId: joueur.id });
       },
       onCancel: function() {}
     });
@@ -586,6 +664,31 @@ socket.on('panneStopped', ({delay}) => {
   }
   btnReset && (btnReset.disabled = false);
 });
+socket.on('hackStart', ({duration}) => {
+  isHacked = true;
+  hackedTimerEnd = Date.now() + duration * 1000;
+  btnDead.classList.add('hidden');
+  btnHack.classList.remove('hidden');
+  btnZombie.classList.add('hidden');
+  btnDead.disabled = true;
+  btnZombie.disabled = true;
+  updateHackButton(duration);
+  showAlert("Tu es hacké, Rétablis le système !", "#1d8f34", 5000);
+
+  if (hackedTimerInterval) clearInterval(hackedTimerInterval);
+  hackedTimerInterval = setInterval(() => {
+    const remain = Math.max(0, Math.ceil((hackedTimerEnd - Date.now())/1000));
+    updateHackButton(remain);
+    if (remain <= 0) {
+      clearInterval(hackedTimerInterval);
+      hackedTimerInterval = null;
+    }
+  }, 1000);
+});
+
+function updateHackButton(remain) {
+  btnHack.innerHTML = `💀 Hacké ! 💀<br><span style="font-size:1em">${remain}s</span>`;
+}
 
 socket.on('debuffTimer', function({ seconds }) {
   showTimer(seconds);
@@ -659,6 +762,13 @@ socket.on('debuffDelay', ({delay}) => {
   assassinDelayEnd = now + delay*1000;
   sabotagePreparing = true;
   pannePreparing = true;
+});
+
+socket.on('hackdebuffDelay', ({delay}) => {
+  const now = Date.now();
+  hackdebuffDelayValue = delay;
+  hackerDelayEnd = now + delay*1000;
+  hackPreparing = true;
 });
 
 socket.on('reset', function() {

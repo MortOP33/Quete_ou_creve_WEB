@@ -10,6 +10,7 @@ let game = {};
 let players = {};
 let sabotage = null;
 let panne = null;
+let hack = null;
 
 // --- Variables pour le nécromancien
 let zombiesToRelever = 2; // Réglé par le maître, valeur par défaut
@@ -35,7 +36,11 @@ function resetGame() {
     panne: false,
     panneId: 0,
     panneDuration: 20,
-    panneCD: 90,       
+    panneCD: 90,
+    hack: false,   
+    hackDuration: 60,
+    hackCD: 90,  
+    hackdebuffDelay: 10,
   };
   players = {};
   sabotage = {
@@ -60,6 +65,17 @@ function resetGame() {
     prepareEndTime: null,
     lastPanneEnd: 0
   };
+  hack = {
+    timer: null,
+    endTime: null,
+    clicks: [],
+    actif: false,
+    id: 0,
+    preparing: false,
+    prepareTimer: null,
+    prepareEndTime: null,
+    lastHackEnd: 0
+  };
   zombiesToRelever = 2;
   zombiesCount = 0;
 }
@@ -70,7 +86,10 @@ function emitState() {
   const joueurs = Object.entries(players).map(([id, data]) => ({
     id,
     pseudo: data.pseudo || '',
-    role: data.role || ''
+    role: data.role || '',
+    mort: !!data.mort,
+    zombie: !!data.zombie,
+    hacked: !!data.hacked
   }));
   io.emit('state', {
     maitrePris: maitrePris,
@@ -86,6 +105,7 @@ function emitState() {
     started: game.started,
     sabotage: sabotage.actif,
     panne: panne.actif,
+    hack: hack.actif,
     zombies: zombiesCount,
     zombiesToRelever: zombiesToRelever
   });
@@ -119,10 +139,25 @@ function stopPanne() {
   emitState();
 }
 
+function stopHack() {
+  if (hack.timer) {
+    clearInterval(hack.timer);
+    hack.timer = null;
+  }
+  hack.actif = false;
+  hack.cibleId = null;
+  hack.preparing = false;
+  hack.prepareEndTime = null;
+  hack.prepareTimer && clearTimeout(hack.prepareTimer);
+  hack.prepareTimer = null;
+  emitState();
+}
+
 function checkEndGame() {
   if (game.assassinsDead >= game.assassins && game.assassins > 0) {
     stopSabotage();
     stopPanne();
+    stopHack();
     io.emit('end', {winner: 'innocents'});
     for (const [socketId, player] of Object.entries(players)) {
       if(player.role === 'maitre') io.to(socketId).emit('reset');
@@ -133,6 +168,7 @@ function checkEndGame() {
   } else if (game.innocentsDead + game.hackerDead + game.necromancienDead >= game.innocents + game.hacker + game.necromancien  > 0) {
     stopSabotage();
     stopPanne();
+    stopHack();
     io.emit('end', {winner: 'assassins'});
     for (const [socketId, player] of Object.entries(players)) {
       if(player.role === 'maitre') io.to(socketId).emit('reset');
@@ -147,7 +183,7 @@ function checkEndGame() {
 io.on('connection', (socket) => {
   socket.on('setRole', ({role, pseudo}) => {
     if (['maitre', 'innocent', 'assassin','hacker','necromancien'].includes(role)) {
-      players[socket.id] = {role, mort: false, zombie: false, pseudo: (pseudo||'')};
+      players[socket.id] = {role, mort: false, zombie: false, pseudo: (pseudo||''), hacked: false, hackTimer: null};
       emitState();
     }
   });
@@ -168,6 +204,7 @@ io.on('connection', (socket) => {
     assassins, innocents, hacker, necromancien,
     sabotageDuration, sabotageCD, debuffDelay, sabotageSyncWindow,
     panneDuration, panneCD,
+    hackDuration, hackCD, hackdebuffDelay,
     zombiesToRelever: zTR
   }) => {
     game.started = true;
@@ -181,14 +218,23 @@ io.on('connection', (socket) => {
     game.sabotageSyncWindow = parseInt(sabotageSyncWindow, 10) || 1;
     game.panneDuration = parseInt(panneDuration, 10) || 20;
     game.panneCD = parseInt(panneCD, 10) || 90;
+    game.hackDuration = parseInt(hackDuration, 10) || 60;
+    game.hackCD = parseInt(hackCD, 10) || 90;
+    game.hackdebuffDelay = parseInt(hackdebuffDelay, 10) || 10;
     zombiesToRelever = parseInt(zTR, 10) || 2;
     zombiesCount = 0;
     for (let id in players) {
       players[id].mort = false;
       players[id].zombie = false;
+      players[id].hacked = false;
+      if (players[id].hackTimer) {
+        clearTimeout(players[id].hackTimer);
+        players[id].hackTimer = null;
+      }
     }
     stopSabotage();
     stopPanne();
+    stopHack();
     io.emit('debut_partie');
     emitState();
   });
@@ -222,6 +268,7 @@ io.on('connection', (socket) => {
     if (zombiesCount >= zombiesToRelever) {
       stopSabotage();
       stopPanne();
+      stopHack();
       io.emit('necromancien_win');
       for (const [socketId, player] of Object.entries(players)) {
         if(player.role === 'maitre') io.to(socketId).emit('reset');
@@ -235,6 +282,7 @@ io.on('connection', (socket) => {
     if (game.started) {
       stopSabotage();
       stopPanne();
+      stopHack();
       io.emit('end', {winner: 'innocents'});
       for (const [socketId, player] of Object.entries(players)) {
         if(player.role === 'maitre') io.to(socketId).emit('reset');
@@ -337,9 +385,54 @@ io.on('connection', (socket) => {
     }, 1000);
   }
 
+  // --- Gestion du hack
+  socket.on('prepare_hack', ({ cibleId }) => {
+    const now = Date.now();
+    if (!game.started || hack.actif || hack.preparing) return;
+    if (!players[socket.id] || players[socket.id].role !== 'hacker' || players[socket.id].mort) return;
+    // CD entre hacks
+    if (hack.lastHackEnd && now - hack.lastHackEnd < game.hackCD * 1000) return;
+    hack.preparing = true;
+    hack.cibleId = cibleId;
+    hack.prepareEndTime = now + game.hackdebuffDelay * 1000;
+    io.to(socket.id).emit('hackdebuffDelay', {delay: game.hackdebuffDelay});
+    hack.prepareTimer = setTimeout(() => {
+      hack.preparing = false;
+      hack.prepareTimer = null;
+      hackStart(cibleId, game.hackDuration);
+    }, game.hackdebuffDelay * 1000);
+  });
+
+  function hackStart(cibleId, duration) {
+    hack.actif = true;
+    hack.endTime = Date.now() + (duration || game.hackDuration) * 1000;
+    hack.id += 1;
+    players[cibleId].hacked = true;
+    io.to(cibleId).emit('hackStart', {duration: (duration || game.hackDuration)});
+    emitState();
+    if (players[cibleId].hackTimer) clearTimeout(players[cibleId].hackTimer);
+    players[cibleId].hackTimer = setTimeout(() => {
+      //if (players[cibleId].hacked && !players[cibleId].mort && !players[cibleId].zombie) {
+      //  // Gerer la mort du joueur complete (verif btn.dead click)
+      //  players[cibleId].mort = true;
+      //  game.innocentsDead++;
+      //  io.to(cibleId).emit('hackDead');
+      //  emitState();
+      //  checkEndGame();
+      //}
+      //players[cibleId].hacked = false;
+      //players[cibleId].hackTimer = null;
+      //hack.actif = false;
+      //hack.cibleId = null;
+      //hack.lastHackEnd = Date.now();
+      //emitState();
+    }, (duration || game.hackDuration) * 1000);
+  }
+
   socket.on('reset', () => {
     stopSabotage();
     stopPanne();
+    stopHack();
     io.emit('end', {winner: 'none'});
     for (const [socketId, player] of Object.entries(players)) {
       if(player.role === 'maitre') io.to(socketId).emit('reset');
