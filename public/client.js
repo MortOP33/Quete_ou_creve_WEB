@@ -720,6 +720,8 @@ socket.on('end', ({ winner }) => {
   clearInterval(hackedTimerInterval);
   hackedTimerInterval = null;
   socket.emit('hackStopped');
+  btnDead.classList.remove('hidden');
+  btnHack.classList.add('hidden');
   setJoueurReturnBtnsState();
   hideTimer();
   if(winner === 'innocents') {
@@ -762,6 +764,8 @@ socket.on('necromancien_win', () => {
   clearInterval(hackedTimerInterval);
   hackedTimerInterval = null;
   socket.emit('hackStopped');
+  btnDead.classList.remove('hidden');
+  btnHack.classList.add('hidden');
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Victoire du Nécromancien !", "#7900a8", 10000);
@@ -809,6 +813,8 @@ socket.on('reset', function() {
     clearInterval(hackedTimerInterval);
     hackedTimerInterval = null;
     socket.emit('hackStopped');
+    btnDead.classList.remove('hidden');
+    btnHack.classList.add('hidden');
   }
 });
 
