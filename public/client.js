@@ -424,6 +424,7 @@ btnHack.onclick = function() {
   enableJoueurBtns();
   setJoueurReturnBtnsState();
   showAlert("Système rétabli !", "#00818a", 2500);
+  socket.emit('hackStopped');
 };
 btnZombie.onclick = function() {
   if (isZombie) return;
@@ -666,8 +667,6 @@ socket.on('panneStopped', ({delay}) => {
   btnReset && (btnReset.disabled = false);
 });
 socket.on('hackStart', ({duration}) => {
-  hackCooldownEnd = Date.now() + hackCDValue * 1000;
-  hackPreparing = false;
   isHacked = true;
   hackedTimerEnd = Date.now() + duration * 1000;
   btnDead.classList.add('hidden');
@@ -681,7 +680,7 @@ socket.on('hackStart', ({duration}) => {
   hackedTimerInterval = setInterval(() => {
     const remain = Math.max(0, Math.ceil((hackedTimerEnd - Date.now())/1000));
     updateHackButton(remain);
-    if (remain <= 0) {
+    if (!isHacked || remain <= 0) {
       clearInterval(hackedTimerInterval);
       hackedTimerInterval = null;
     }
@@ -695,8 +694,8 @@ socket.on('hackFailed', function() {
   setJoueurReturnBtnsState();
   btnZombie.classList.remove('hidden');
   btnZombie.disabled = false;
-  socket.emit('dead', { role });
   showAlert("Le virus t'a tué !", "#da0037", 5000);
+  socket.emit('dead', { role });
   enableJoueurBtns();
 });
 
@@ -783,6 +782,10 @@ socket.on('hackdebuffDelay', ({delay}) => {
   hackdebuffDelayValue = delay;
   hackerDelayEnd = now + delay*1000;
   hackPreparing = true;
+});
+
+socket.on('hackCooldown', ({ delay }) => {
+  hackCooldownEnd = Date.now() + delay * 1000;
 });
 
 socket.on('reset', function() {

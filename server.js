@@ -399,16 +399,18 @@ io.on('connection', (socket) => {
     hack.prepareTimer = setTimeout(() => {
       hack.preparing = false;
       hack.prepareTimer = null;
-      hackStart(cibleId, game.hackDuration);
+      hackStart(cibleId, game.hackDuration, socket.id);
     }, game.hackdebuffDelay * 1000);
   });
 
-  function hackStart(cibleId, duration) {
+  function hackStart(cibleId, duration, hackerSocketId) {
     hack.actif = true;
     hack.endTime = Date.now() + (duration || game.hackDuration) * 1000;
     hack.id += 1;
+    hack.hackerSocketId = hackerSocketId;
     players[cibleId].hacked = true;
     io.to(cibleId).emit('hackStart', {duration: (duration || game.hackDuration)});
+    io.to(hackerSocketId).emit('hackCooldown', { delay: game.hackCD });
     emitState();
     if (players[cibleId].hackTimer) clearTimeout(players[cibleId].hackTimer);
     players[cibleId].hackTimer = setTimeout(() => {
@@ -436,6 +438,20 @@ io.on('connection', (socket) => {
       emitState();
     }, (duration || game.hackDuration) * 1000);
   }
+
+  socket.on('hackStopped', () => {
+    if (!game.started) return;
+    if (!players[socket.id] || !players[socket.id].hacked) return;
+    players[socket.id].hacked = false;
+    if (hack.timer) {
+      clearInterval(hack.timer);
+      hack.timer = null;
+    }
+    hack.actif = false;
+    hack.cibleId = null;
+    hack.lastHackEnd = Date.now();
+    emitState();
+  });
 
   socket.on('reset', () => {
     stopSabotage();
