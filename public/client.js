@@ -79,6 +79,8 @@ const audioSabotageUp = document.getElementById('audioSabotageUp');
 const audioSabotageDown = document.getElementById('audioSabotageDown');
 const audioPanneUp = document.getElementById('audioPanneUp');
 const audioPanneDown = document.getElementById('audioPanneDown');
+const audioHackOn = document.getElementById('audioHackOn');
+const audioHackOff = document.getElementById('audioHackOff');
 const confirmPopup = document.getElementById('confirmPopup');
 const popupOk = document.getElementById('popupOk');
 const popupCancel = document.getElementById('popupCancel');
@@ -189,7 +191,8 @@ function showHackerPopup({ onSelect, onCancel }) {
     j.id !== socket.id &&
     j.pseudo &&
     !j.mort &&
-    !j.zombie
+    !j.zombie &&
+    !j.hasbeenHacked
   );
   joueursAffichables = joueursAffichables
     .map(j => ({ ...j, sort: Math.random() }))
@@ -519,6 +522,19 @@ btnAction.onclick = function() {
       hackerDelayShowTimeout = setTimeout(() => hideTimer(), 1500);
       return;
     }
+    let joueursAffichables = joueursState.filter(j =>
+      (['innocent', 'assassin', 'hacker', 'necromancien'].includes(j.role)) &&
+      j.id !== socket.id &&
+      j.pseudo &&
+      !j.mort &&
+      !j.zombie &&
+      !j.hasbeenHacked
+    );
+    if (joueursAffichables.length === 0) {
+      // Victoire instantanée du hacker !
+      socket.emit('hacker_win');
+      return;
+    }
     showHackerPopup({
       onSelect: function(joueur) {
         hackPreparing = true;
@@ -754,6 +770,34 @@ socket.on('end', ({ winner }) => {
   pannePreparing = false;
 });
 
+socket.on('hacker_win', () => {
+  sabotageEnCours = false;
+  panneEnCours = false;
+  endTriggered = true;
+  btnAction.disabled = true;
+  btnDead.disabled = true;
+  btnZombie.disabled = true;
+  clearInterval(hackedTimerInterval);
+  hackedTimerInterval = null;
+  socket.emit('hackStopped');
+  btnDead.classList.remove('hidden');
+  btnHack.classList.add('hidden');
+  setJoueurReturnBtnsState();
+  hideTimer();
+  showAlert("Victoire du Hacker !", "#1d8f34", 10000);
+  if (role !== "maitre") {
+    try { audioHacker.currentTime = 0; audioHacker.play(); } catch(e){}
+    setTimeout(() => showPage('role'), 10000);
+    setTimeout(() => role = null, 10000);
+    setTimeout(() => resetJoueurStateUI(), 10000);
+  }
+  enableJoueurReturnBtns();
+  btnReset && (btnReset.disabled = false);
+  enableMaitreReturnBtn();
+  sabotagePreparing = false;
+  pannePreparing = true;
+});
+
 socket.on('necromancien_win', () => {
   sabotageEnCours = false;
   panneEnCours = false;
@@ -819,7 +863,7 @@ socket.on('reset', function() {
 });
 
 function unlockAudio() {
-  for (const a of [audioInnocents, audioAssassins, audioSabotageUp, audioSabotageDown, audioPanneUp, audioPanneDown, audioNecromancien]) {
+  for (const a of [audioInnocents, audioAssassins, audioSabotageUp, audioSabotageDown, audioPanneUp, audioPanneDown, audioHackOn, audioHackOff, audioHacker, audioNecromancien]) {
     a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(()=>{});
   }
   document.removeEventListener('click', unlockAudio);

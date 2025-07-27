@@ -18,6 +18,7 @@ let zombiesCount = 0;
 
 function resetGame() {
   for (let id in players) {
+    players[id].hasbeenHacked = false;
     if (players[id].hackTimer) {
       clearTimeout(players[id].hackTimer);
       players[id].hackTimer = null;
@@ -95,7 +96,8 @@ function emitState() {
     role: data.role || '',
     mort: !!data.mort,
     zombie: !!data.zombie,
-    hacked: !!data.hacked
+    hacked: !!data.hacked,
+    hasbeenHacked: !!data.hasbeenHacked
   }));
   io.emit('state', {
     maitrePris: maitrePris,
@@ -298,6 +300,18 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('hacker_win', () => {
+    stopSabotage();
+    stopPanne();
+    stopHack();
+    io.emit('hacker_win');
+    for (const [socketId, player] of Object.entries(players)) {
+      if(player.role === 'maitre') io.to(socketId).emit('reset');
+    }
+    resetGame();
+    emitState();
+  });
+
   // --- Gestion du sabotage
   socket.on('prepare_sabotage', () => {
     const now = Date.now();
@@ -414,6 +428,7 @@ io.on('connection', (socket) => {
     hack.id += 1;
     hack.hackerSocketId = hackerSocketId;
     players[cibleId].hacked = true;
+    players[cibleId].hasbeenHacked = true;
     io.to(cibleId).emit('hackStart', {duration: (duration || game.hackDuration)});
     io.to(hackerSocketId).emit('hackCooldown', { delay: game.hackCD });
     emitState();
