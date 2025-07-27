@@ -714,7 +714,6 @@ socket.on('end', ({ winner }) => {
   btnAction.disabled = true;
   btnDead.disabled = true;
   btnZombie.disabled = true;
-  clearInterval(hackedTimerInterval);
   setJoueurReturnBtnsState();
   hideTimer();
   if(winner === 'innocents') {

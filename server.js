@@ -74,7 +74,6 @@ function resetGame() {
     preparing: false,
     prepareTimer: null,
     prepareEndTime: null,
-    lastHackEnd: 0
   };
   zombiesToRelever = 2;
   zombiesCount = 0;
@@ -391,7 +390,6 @@ io.on('connection', (socket) => {
     if (!game.started || hack.actif || hack.preparing) return;
     if (!players[socket.id] || players[socket.id].role !== 'hacker' || players[socket.id].mort) return;
     // CD entre hacks
-    //if (hack.lastHackEnd && now - hack.lastHackEnd < game.hackCD * 1000) return;
     hack.preparing = true;
     hack.cibleId = cibleId;
     hack.prepareEndTime = now + game.hackdebuffDelay * 1000;
@@ -433,7 +431,6 @@ io.on('connection', (socket) => {
       players[socket.id].hackTimer = null;
     }
     stopHack();
-    hack.lastHackEnd = Date.now();
     emitState();
   });
 
