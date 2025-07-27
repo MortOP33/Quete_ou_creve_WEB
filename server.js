@@ -391,7 +391,7 @@ io.on('connection', (socket) => {
     if (!game.started || hack.actif || hack.preparing) return;
     if (!players[socket.id] || players[socket.id].role !== 'hacker' || players[socket.id].mort) return;
     // CD entre hacks
-    if (hack.lastHackEnd && now - hack.lastHackEnd < game.hackCD * 1000) return;
+    //if (hack.lastHackEnd && now - hack.lastHackEnd < game.hackCD * 1000) return;
     hack.preparing = true;
     hack.cibleId = cibleId;
     hack.prepareEndTime = now + game.hackdebuffDelay * 1000;
@@ -414,27 +414,8 @@ io.on('connection', (socket) => {
     emitState();
     if (players[cibleId].hackTimer) clearTimeout(players[cibleId].hackTimer);
     players[cibleId].hackTimer = setTimeout(() => {
-      //if (players[cibleId].hacked && !players[cibleId].mort && !players[cibleId].zombie) {
-      //  // Gerer la mort du joueur complete (verif btn.dead click)
-      //  players[cibleId].mort = true;
-      //  switch (players[cibleId].role) {
-      //    case 'innocent': game.innocentsDead++; break;
-      //    case 'assassin': game.assassinsDead++; break;
-      //    case 'hacker': game.hackerDead++; break;
-      //    case 'necromancien': game.necromancienDead++; break;
-      //  }
-      //  io.to(cibleId).emit('hackDead');
-      //  emitState();
-      //  checkEndGame();
-      //}
-      //players[cibleId].hacked = false;
-      //players[cibleId].hackTimer = null;
-      //hack.actif = false;
-      //hack.cibleId = null;
-      //hack.lastHackEnd = Date.now();
-      //emitState();
       stopHack();
-      io.emit('hackFailed');
+      io.to(cibleId).emit('hackFailed');
       emitState();
     }, (duration || game.hackDuration) * 1000);
   }
@@ -447,8 +428,11 @@ io.on('connection', (socket) => {
       clearInterval(hack.timer);
       hack.timer = null;
     }
-    hack.actif = false;
-    hack.cibleId = null;
+    if (players[socket.id].hackTimer) {
+      clearInterval(players[socket.id].hackTimer);
+      players[socket.id].hackTimer = null;
+    }
+    stopHack();
     hack.lastHackEnd = Date.now();
     emitState();
   });

@@ -420,7 +420,6 @@ btnHack.onclick = function() {
   hackedTimerInterval = null;
   btnHack.classList.add('hidden');
   btnDead.classList.remove('hidden');
-  setActionButtonForRole();
   enableJoueurBtns();
   setJoueurReturnBtnsState();
   showAlert("Système rétabli !", "#00818a", 2500);
@@ -690,6 +689,7 @@ socket.on('hackFailed', function() {
   mort = true;
   isHacked = false;
   btnDead.classList.add('hidden');
+  btnHack.classList.add('hidden');
   btnAction.disabled = true;
   setJoueurReturnBtnsState();
   btnZombie.classList.remove('hidden');
@@ -714,6 +714,7 @@ socket.on('end', ({ winner }) => {
   btnAction.disabled = true;
   btnDead.disabled = true;
   btnZombie.disabled = true;
+  clearInterval(hackedTimerInterval);
   setJoueurReturnBtnsState();
   hideTimer();
   if(winner === 'innocents') {
