@@ -415,7 +415,12 @@ io.on('connection', (socket) => {
       //if (players[cibleId].hacked && !players[cibleId].mort && !players[cibleId].zombie) {
       //  // Gerer la mort du joueur complete (verif btn.dead click)
       //  players[cibleId].mort = true;
-      //  game.innocentsDead++;
+      //  switch (players[cibleId].role) {
+      //    case 'innocent': game.innocentsDead++; break;
+      //    case 'assassin': game.assassinsDead++; break;
+      //    case 'hacker': game.hackerDead++; break;
+      //    case 'necromancien': game.necromancienDead++; break;
+      //  }
       //  io.to(cibleId).emit('hackDead');
       //  emitState();
       //  checkEndGame();
@@ -426,6 +431,9 @@ io.on('connection', (socket) => {
       //hack.cibleId = null;
       //hack.lastHackEnd = Date.now();
       //emitState();
+      stopHack();
+      io.emit('hackFailed');
+      emitState();
     }, (duration || game.hackDuration) * 1000);
   }
 

@@ -311,7 +311,7 @@ function disableMaitreReturnBtn() {
   btnRetourMaitre.disabled = true;
 }
 function setActionButtonForRole() {
-  btnAction.disabled = mort || isZombie;
+  btnAction.disabled = mort || isZombie || isHacked;
   if (role === "assassin" || role === "innocent" || role === "hacker" || role === "necromancien") {
     btnAction.textContent = "Action";
     btnAction.className = "big-btn action-btn";
@@ -362,7 +362,7 @@ btnStart.onclick = function() {
     sabotageDuration, sabotageCD: sabotageCDValue, debuffDelay: debuffDelayValue,
     sabotageSyncWindow: 1,
     panneDuration, panneCD: panneCDValue,
-    hackDuration, hackCD: hackCDValue,
+    hackDuration, hackCD: hackCDValue, hackdebuffDelay: hackdebuffDelayValue,
     zombiesToRelever
   });
   configPanel.classList.add('hidden');
@@ -414,15 +414,16 @@ btnDead.onclick = function() {
   }, "Confirmer que tu es mort ?");
 };
 btnHack.onclick = function() {
-  //if (mort || isZombie || endTriggered || !isHacked) return;
-  //socket.emit('restore_hack');
-  //clearInterval(hackedTimerInterval);
-  //hackedTimerInterval = null;
-  //isHacked = false;
-  //btnHack.classList.add('hidden');
-  //btnDead.classList.remove('hidden');
-  //btnDead.disabled = false;
-  //showAlert('Système rétabli !', '#00818a', 2500);
+  if (mort || isZombie || endTriggered || !isHacked) return;
+  isHacked = false;
+  clearInterval(hackedTimerInterval);
+  hackedTimerInterval = null;
+  btnHack.classList.add('hidden');
+  btnDead.classList.remove('hidden');
+  setActionButtonForRole();
+  enableJoueurBtns();
+  setJoueurReturnBtnsState();
+  showAlert("Système rétabli !", "#00818a", 2500);
 };
 btnZombie.onclick = function() {
   if (isZombie) return;
@@ -582,7 +583,7 @@ socket.on('sabotageStart', function({ duration }) {
   btnAction.className = "big-btn debuff-btn";
   btnAction.dataset.state = "debuff";
   btnAction.disabled = false;
-  btnDead.disabled = mort || isZombie;
+  btnDead.disabled = mort || isZombie || isHacked;
   setJoueurReturnBtnsState();
   showTimer(duration);
   showAlert("Sabotage ! Deux joueurs doivent désamorcer ensemble.", "#f7b801", 5000);
@@ -597,7 +598,7 @@ socket.on('sabotageStopped', ({delay}) => {
   sabotageCDValue = delay;
   sabotageEnCours = false;
   setActionButtonForRole();
-  btnDead.disabled = mort || isZombie;
+  btnDead.disabled = mort || isZombie || isHacked;
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Sabotage désamorcé !", "#00818a", 2500);
@@ -637,7 +638,7 @@ socket.on('panneStart', function({ duration }) {
   btnAction.className = "big-btn debuff-btn";
   btnAction.dataset.state = "debuff";
   btnAction.disabled = true;
-  btnDead.disabled = mort || isZombie;
+  btnDead.disabled = mort || isZombie || isHacked;
   setJoueurReturnBtnsState();
   showTimer(duration);
   showAlert("Les lampes sont coupées", "#f7b801", 5000);
@@ -651,7 +652,7 @@ socket.on('panneStopped', ({delay}) => {
   panneCDValue = delay;
   panneEnCours = false;
   setActionButtonForRole();
-  btnDead.disabled = mort || isZombie;
+  btnDead.disabled = mort || isZombie || isHacked;
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Les lampes sont restaurées", "#00818a", 2500);
@@ -665,6 +666,8 @@ socket.on('panneStopped', ({delay}) => {
   btnReset && (btnReset.disabled = false);
 });
 socket.on('hackStart', ({duration}) => {
+  hackCooldownEnd = Date.now() + hackCDValue * 1000;
+  hackPreparing = false;
   isHacked = true;
   hackedTimerEnd = Date.now() + duration * 1000;
   btnDead.classList.add('hidden');
@@ -674,7 +677,6 @@ socket.on('hackStart', ({duration}) => {
   btnZombie.disabled = true;
   updateHackButton(duration);
   showAlert("Tu es hacké, Rétablis le système !", "#1d8f34", 5000);
-
   if (hackedTimerInterval) clearInterval(hackedTimerInterval);
   hackedTimerInterval = setInterval(() => {
     const remain = Math.max(0, Math.ceil((hackedTimerEnd - Date.now())/1000));
@@ -684,6 +686,18 @@ socket.on('hackStart', ({duration}) => {
       hackedTimerInterval = null;
     }
   }, 1000);
+});
+socket.on('hackFailed', function() {
+  mort = true;
+  isHacked = false;
+  btnDead.classList.add('hidden');
+  btnAction.disabled = true;
+  setJoueurReturnBtnsState();
+  btnZombie.classList.remove('hidden');
+  btnZombie.disabled = false;
+  socket.emit('dead', { role });
+  showAlert("Le virus t'a tué !", "#da0037", 5000);
+  enableJoueurBtns();
 });
 
 function updateHackButton(remain) {
