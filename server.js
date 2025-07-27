@@ -17,6 +17,13 @@ let zombiesToRelever = 2; // Réglé par le maître, valeur par défaut
 let zombiesCount = 0;
 
 function resetGame() {
+  for (let id in players) {
+    if (players[id].hackTimer) {
+      clearTimeout(players[id].hackTimer);
+      players[id].hackTimer = null;
+    }
+    players[id].hacked = false;
+  }
   game = {
     started: false,
     innocents: 0,
