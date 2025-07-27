@@ -481,6 +481,10 @@
         <label for="hackCDInput">CD entre hacks :</label>
         <input id="hackCDInput" type="number" min="10" max="600" value="90"/> s
       </div>
+      <div class="form-group">
+        <label for="antiHackCodeInput">Code anti-hack :</label>
+        <input id="antiHackCodeInput" type="number" placeholder="123">
+      </div>
       <div class="form-group" style="justify-content:center;">
         <button id="btnStart" class="role-btn innocent-btn">Démarrer la partie</button>
       </div>
@@ -533,6 +537,18 @@
       </div>
       <button id="popupHackerCancel" class="popup-btn cancel">Annuler</button>
     </div>    
+  </div>
+  <div id="popupAntiHack" class="popup-backdrop hidden">
+    <div class="popup-box">
+      <div style="margin-bottom:12px;">Saisir le code</div>
+      <div class="form-group" style="justify-content:center;">
+        <input id="popupAntiHackInput" type="number">
+      </div>
+      <div style="margin-top:12px;">
+        <button id="popupAntiHackOk" class="popup-btn" style="margin-right:12px;">OK</button>
+        <button id="popupAntiHackCancel" class="popup-btn cancel">Annuler</button>
+      </div>
+    </div>
   </div>
   <script src="client.js"></script>
 </body>

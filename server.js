@@ -114,6 +114,7 @@ function emitState() {
     sabotage: sabotage.actif,
     panne: panne.actif,
     hack: hack.actif,
+    antiHackCode: game.antiHackCode || "123",
     zombies: zombiesCount,
     zombiesToRelever: zombiesToRelever
   });
@@ -213,7 +214,8 @@ io.on('connection', (socket) => {
     sabotageDuration, sabotageCD, debuffDelay, sabotageSyncWindow,
     panneDuration, panneCD,
     hackDuration, hackCD, hackdebuffDelay,
-    zombiesToRelever: zTR
+    zombiesToRelever: zTR,
+    antiHackCode
   }) => {
     game.started = true;
     game.assassins = parseInt(assassins, 10) || 1;
@@ -229,6 +231,7 @@ io.on('connection', (socket) => {
     game.hackDuration = parseInt(hackDuration, 10) || 60;
     game.hackCD = parseInt(hackCD, 10) || 90;
     game.hackdebuffDelay = parseInt(hackdebuffDelay, 10) || 10;
+    game.antiHackCode = (antiHackCode || "123");
     zombiesToRelever = parseInt(zTR, 10) || 2;
     zombiesCount = 0;
     for (let id in players) {

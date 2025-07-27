@@ -16,6 +16,7 @@ let panneCDValue = 90;
 let hackDuration = 60;
 let hackCDValue = 90;
 let hackdebuffDelayValue = 10;
+let antiHackCode = "123";
 let assassinCooldownSabotageEnd = 0;
 let assassinCooldownPanneEnd = 0;
 let assassinDelayEnd = 0;
@@ -361,6 +362,7 @@ btnStart.onclick = function() {
   panneCDValue = parseInt(panneCDInput.value, 10) || 90;
   hackDuration = parseInt(hackDurationInput.value, 10) || 60;
   hackCDValue = parseInt(hackCDInput.value, 10) || 90;
+  const antiHackCode = document.getElementById('antiHackCodeInput').value || "123";
   hackdebuffDelayValue = parseInt(hackdebuffDelayInput.value, 10) || 10;
   const zombiesToRelever = parseInt(zombiesToReleverInput.value, 10) || 6;
   socket.emit('start', {
@@ -369,7 +371,8 @@ btnStart.onclick = function() {
     sabotageSyncWindow: 1,
     panneDuration, panneCD: panneCDValue,
     hackDuration, hackCD: hackCDValue, hackdebuffDelay: hackdebuffDelayValue,
-    zombiesToRelever
+    zombiesToRelever,
+    antiHackCode
   });
   configPanel.classList.add('hidden');
   suiviPanel.classList.remove('hidden');
@@ -421,16 +424,37 @@ btnDead.onclick = function() {
 };
 btnHack.onclick = function() {
   if (mort || isZombie || endTriggered || !isHacked) return;
-  isHacked = false;
-  clearInterval(hackedTimerInterval);
-  hackedTimerInterval = null;
-  btnHack.classList.add('hidden');
-  btnDead.classList.remove('hidden');
-  enableJoueurBtns();
-  setJoueurReturnBtnsState();
-  showAlert("Système rétabli !", "#00818a", 2500);
-  try { audioHackOff.currentTime = 0; audioHackOff.play(); } catch(e){}
-  socket.emit('hackStopped');
+  const popup = document.getElementById('popupAntiHack');
+  const input = document.getElementById('popupAntiHackInput');
+  const okBtn = document.getElementById('popupAntiHackOk');
+  const cancelBtn = document.getElementById('popupAntiHackCancel');
+  input.value = "";
+  popup.classList.remove('hidden');
+  input.focus();
+  function cleanup() {
+    popup.classList.add('hidden');
+    okBtn.onclick = null;
+    cancelBtn.onclick = null;
+  }
+  okBtn.onclick = function() {
+    if ((input.value+"").trim() === antiHackCode) {
+      cleanup();
+      // Le code est bon, purge le hack
+      isHacked = false;
+      clearInterval(hackedTimerInterval);
+      hackedTimerInterval = null;
+      btnHack.classList.add('hidden');
+      btnDead.classList.remove('hidden');
+      enableJoueurBtns();
+      setJoueurReturnBtnsState();
+      showAlert("Système rétabli !", "#00818a", 2500);
+      try { audioHackOff.currentTime = 0; audioHackOff.play(); } catch(e){}
+      socket.emit('hackStopped');
+    }
+  };
+  cancelBtn.onclick = function() {
+    cleanup();
+  };
 };
 btnZombie.onclick = function() {
   if (isZombie) return;
@@ -575,6 +599,7 @@ let joueursState = [];
 socket.on('state', (state) => {
   partieCommencee = state.started;
   joueursState = state.joueurs || [];
+  antiHackCode = state.antiHackCode || "123";
   const btnMaitre = document.getElementById('btnMaitre');
   if (btnMaitre) {
     btnMaitre.disabled = !!state.maitrePris;
