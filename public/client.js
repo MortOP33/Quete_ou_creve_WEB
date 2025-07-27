@@ -259,6 +259,9 @@ function resetJoueurStateUI() {
   panneEnCours = false;
   btnHack.disabled = false;
   isZombie = false;
+  clearInterval(hackedTimerInterval);
+  hackedTimerInterval = null;
+  socket.emit('hackStopped');
   btnDead.disabled = true;
   btnDead.classList.remove('hidden');
   btnHack.classList.add('hidden');
@@ -714,6 +717,9 @@ socket.on('end', ({ winner }) => {
   btnAction.disabled = true;
   btnDead.disabled = true;
   btnZombie.disabled = true;
+  clearInterval(hackedTimerInterval);
+  hackedTimerInterval = null;
+  socket.emit('hackStopped');
   setJoueurReturnBtnsState();
   hideTimer();
   if(winner === 'innocents') {
@@ -753,6 +759,9 @@ socket.on('necromancien_win', () => {
   btnAction.disabled = true;
   btnDead.disabled = true;
   btnZombie.disabled = true;
+  clearInterval(hackedTimerInterval);
+  hackedTimerInterval = null;
+  socket.emit('hackStopped');
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Victoire du Nécromancien !", "#7900a8", 10000);
@@ -797,6 +806,9 @@ socket.on('reset', function() {
     endTriggered = false;
     sabotageEnCours = false;
     panneEnCours = false;
+    clearInterval(hackedTimerInterval);
+    hackedTimerInterval = null;
+    socket.emit('hackStopped');
   }
 });
 
