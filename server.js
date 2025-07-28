@@ -247,6 +247,7 @@ io.on('connection', (socket) => {
     stopPanne();
     stopHack();
     io.emit('debut_partie');
+    io.emit('wait_actions', { seconds: 20 });
     emitState();
   });
 

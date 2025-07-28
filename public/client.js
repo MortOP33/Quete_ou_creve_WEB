@@ -37,6 +37,7 @@ let hackerDelayEnd = 0;
 let isHacked = false;
 let hackedTimerEnd = 0;
 let hackedTimerInterval = null;
+let waitActionsEnd = 0;
 
 const rolePage = document.getElementById('rolePage');
 const maitrePage = document.getElementById('maitrePage');
@@ -119,7 +120,12 @@ function hideAlert() {
 }
 
 function enableJoueurBtns() {
-  if (!mort && !isZombie && partieCommencee && !endTriggered) {
+  if (waitActionsEnd && Date.now() < waitActionsEnd && !mort && !isZombie && partieCommencee && !endTriggered) {
+    btnDead.disabled = false;
+    btnAction.disabled = true;
+    btnZombie.disabled = true;
+    btnRetourJoueur.disabled = false;
+  } else if (!mort && !isZombie && partieCommencee && !endTriggered) {
     btnDead.disabled = false;
     btnAction.disabled = false;
     btnZombie.disabled = true;
@@ -353,6 +359,8 @@ btnHacker.onclick = function() { chooseRole('hacker'); };
 btnNecro.onclick = function() { chooseRole('necromancien'); };
 
 btnStart.onclick = function() {
+  const antiHackCode = document.getElementById('antiHackCodeInput').value;
+  if (!antiHackCode) { alert("Il faut saisir un code pour anti hack !"); return; }
   const assassins = parseInt(assassinsInput.value, 10) || 1;
   const innocents = parseInt(innocentsInput.value, 10) || 1;
   sabotageDuration = parseInt(sabotageDurationInput.value, 10) || 40;
@@ -362,7 +370,6 @@ btnStart.onclick = function() {
   panneCDValue = parseInt(panneCDInput.value, 10) || 90;
   hackDuration = parseInt(hackDurationInput.value, 10) || 60;
   hackCDValue = parseInt(hackCDInput.value, 10) || 90;
-  const antiHackCode = document.getElementById('antiHackCodeInput').value || "123";
   hackdebuffDelayValue = parseInt(hackdebuffDelayInput.value, 10) || 10;
   const zombiesToRelever = parseInt(zombiesToReleverInput.value, 10) || 6;
   socket.emit('start', {
@@ -593,6 +600,23 @@ btnAction.addEventListener('click', function() {
 
 socket.on('debut_partie', () => {
   try { audioDebutPartie.currentTime = 0; audioDebutPartie.play(); } catch(e){}
+});
+
+socket.on('wait_actions', ({ seconds }) => {
+  const now = Date.now();
+  waitActionsEnd = now + seconds * 1000;
+  let remain = seconds;
+  const initialLabel = btnAction.textContent;
+  btnAction.textContent = `Actions dans ${remain}s...`;
+  let interval = setInterval(() => {
+    remain = Math.max(0, Math.ceil((waitActionsEnd - Date.now()) / 1000));
+    btnAction.textContent = remain > 0 ? `Actions dans ${remain}s...` : initialLabel;
+    if (remain <= 0) {
+      clearInterval(interval);
+      btnAction.textContent = initialLabel;
+      enableJoueurBtns()
+    }
+  }, 500);
 });
 
 let joueursState = [];
