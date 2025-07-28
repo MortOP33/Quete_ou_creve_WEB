@@ -421,6 +421,7 @@ io.on('connection', (socket) => {
     hack.prepareTimer = setTimeout(() => {
       hack.preparing = false;
       hack.prepareTimer = null;
+      //if (players[cibleId].mort || players[cibleId].zombie) return;
       hackStart(cibleId, game.hackDuration, socket.id);
     }, game.hackdebuffDelay * 1000);
   });

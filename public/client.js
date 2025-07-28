@@ -720,7 +720,9 @@ socket.on('hackStart', ({duration}) => {
   btnZombie.disabled = true;
   updateHackButton(duration);
   showAlert("Tu es hacké, Rétablis le système !", "#1d8f34", 5000);
-  try { audioHackOn.currentTime = 0; audioHackOn.play(); } catch(e){}
+  if (!mort && !isZombie) {
+    try { audioHackOn.currentTime = 0; audioHackOn.play(); } catch(e){}
+  }
   if (hackedTimerInterval) clearInterval(hackedTimerInterval);
   hackedTimerInterval = setInterval(() => {
     const remain = Math.max(0, Math.ceil((hackedTimerEnd - Date.now())/1000));
