@@ -422,7 +422,6 @@ io.on('connection', (socket) => {
     hack.prepareTimer = setTimeout(() => {
       hack.preparing = false;
       hack.prepareTimer = null;
-      //if (players[cibleId].mort || players[cibleId].zombie) return;
       hackStart(cibleId, game.hackDuration, socket.id);
     }, game.hackdebuffDelay * 1000);
   });
@@ -434,13 +433,17 @@ io.on('connection', (socket) => {
     hack.hackerSocketId = hackerSocketId;
     players[cibleId].hacked = true;
     players[cibleId].hasbeenHacked = true;
-    io.to(cibleId).emit('hackStart', {duration: (duration || game.hackDuration)});
+    if (!players[cibleId].mort && !players[cibleId].zombie) {
+      io.to(cibleId).emit('hackStart', {duration: (duration || game.hackDuration)});
+    }
     io.to(hackerSocketId).emit('hackCooldown', { delay: game.hackCD });
     emitState();
     if (players[cibleId].hackTimer) clearTimeout(players[cibleId].hackTimer);
     players[cibleId].hackTimer = setTimeout(() => {
       stopHack();
-      io.to(cibleId).emit('hackFailed');
+      if (!players[cibleId].mort && !players[cibleId].zombie) {
+        io.to(cibleId).emit('hackFailed');
+      }
       emitState();
     }, (duration || game.hackDuration) * 1000);
   }
