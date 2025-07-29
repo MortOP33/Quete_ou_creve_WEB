@@ -129,10 +129,11 @@ function enableJoueurBtns() {
     btnDead.disabled = false;
     btnAction.disabled = false;
     btnZombie.disabled = true;
-    btnRetourJoueur.disabled = false;
+    btnRetourJoueur.disabled = true;
   } else if (isZombie && partieCommencee && !endTriggered) {
-    btnDead.disabled = true;
-    btnAction.disabled = true;
+    // Tous disabled (ne font rien quand clic) mais laissé ouvert pour feinter vivant
+    btnDead.disabled = false;
+    btnAction.disabled = false;
     btnZombie.disabled = true;
     btnRetourJoueur.disabled = true;
   } else if (mort && partieCommencee && !endTriggered) {
@@ -415,7 +416,7 @@ btnRoleToggle.onclick = function() {
   }
 };
 btnDead.onclick = function() {
-  if (mort || endTriggered) return;
+  if (mort || endTriggered || isZombie) return;
   showConfirmPopup((ok) => {
     if (!ok) return;
     mort = true;
@@ -469,7 +470,8 @@ btnZombie.onclick = function() {
     if (!ok) return;
     isZombie = true;
     btnZombie.disabled = true;
-    btnAction.disabled = true;
+    btnDead.classList.remove('hidden');
+    btnZombie.classList.add('hidden');
     socket.emit('zombie');
     showAlert("Tu es un zombie.", "#7900a8", 5000);
     enableJoueurBtns();
@@ -682,9 +684,16 @@ socket.on('sabotageStopped', ({delay}) => {
 });
 socket.on('sabotageFailed', function() {
   sabotageEnCours = false;
+  endTriggered = true;
   btnAction.disabled = true;
   btnDead.disabled = true;
   btnZombie.disabled = true;
+  clearInterval(hackedTimerInterval);
+  hackedTimerInterval = null;
+  socket.emit('hackStopped');
+  btnDead.classList.remove('hidden');
+  btnHack.classList.add('hidden');
+  btnZombie.classList.add('hidden');
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Sabotage réussi par les assassins ! Fin de partie.", "#da0037", 10000);
@@ -698,7 +707,6 @@ socket.on('sabotageFailed', function() {
   btnReset && (btnReset.disabled = false);
   enableMaitreReturnBtn();
   sabotagePreparing = false;
-  endTriggered = true;
 });
 
 socket.on('panneStart', function({ duration }) {
@@ -791,6 +799,7 @@ socket.on('end', ({ winner }) => {
   socket.emit('hackStopped');
   btnDead.classList.remove('hidden');
   btnHack.classList.add('hidden');
+  btnZombie.classList.add('hidden');
   setJoueurReturnBtnsState();
   hideTimer();
   if(winner === 'innocents') {
@@ -835,6 +844,7 @@ socket.on('hacker_win', () => {
   socket.emit('hackStopped');
   btnDead.classList.remove('hidden');
   btnHack.classList.add('hidden');
+  btnZombie.classList.add('hidden');
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Victoire du Hacker !", "#1d8f34", 10000);
@@ -863,6 +873,7 @@ socket.on('necromancien_win', () => {
   socket.emit('hackStopped');
   btnDead.classList.remove('hidden');
   btnHack.classList.add('hidden');
+  btnZombie.classList.add('hidden');
   setJoueurReturnBtnsState();
   hideTimer();
   showAlert("Victoire du Nécromancien !", "#7900a8", 10000);
@@ -912,6 +923,7 @@ socket.on('reset', function() {
     socket.emit('hackStopped');
     btnDead.classList.remove('hidden');
     btnHack.classList.add('hidden');
+    btnZombie.classList.add('hidden');
   }
 });
 
