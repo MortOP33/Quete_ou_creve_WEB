@@ -12,6 +12,8 @@ let sabotage = null;
 let panne = null;
 let hack = null;
 
+// Test modification
+
 // --- Variables pour le nécromancien
 let zombiesToRelever = 2; // Réglé par le maître, valeur par défaut
 let zombiesCount = 0;
